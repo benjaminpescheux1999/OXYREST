@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: oxyrest-api
+    runtime: node
+    plan: starter
+    autoDeploy: true
+    rootDir: OxyRest
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: PORT
+        value: 8080
+      - key: DATA_DIR
+        value: ./data
+      - key: ADMIN_API_KEY
+        sync: false
+      - key: TOKEN_PEPPER
+        sync: false
+      - key: UTILITY_LATEST_VERSION
+        value: 0.1.0.2
+      - key: UTILITY_DOWNLOADS_JSON
+        sync: false
+      - key: SFTP_HOST
+        sync: false
+      - key: SFTP_PORT
+        value: 22
+      - key: SFTP_USERNAME
+        sync: false
+      - key: SFTP_PASSWORD
+        sync: false
+      - key: SFTP_REMOTE_BASE_PATH
+        sync: false
+      - key: UPDATE_CRYPTO_ITERATIONS
+        value: 120000

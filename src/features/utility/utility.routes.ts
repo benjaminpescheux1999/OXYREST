@@ -1,0 +1,86 @@
+import { Router } from "express";
+import { z } from "zod";
+import { resolveUtilityContract } from "../versioning/versioning.service";
+import { findTokenRecord, touchToken } from "../auth/token.service";
+import { getUtilityByTokenId, upsertUtility } from "./utility.service";
+
+export const utilityRouter = Router();
+
+const negotiateSchema = z.object({
+  utilityVersion: z.string().min(1),
+  accessKey: z.string().min(1)
+});
+
+utilityRouter.post("/negotiate", (req, res) => {
+  const parsed = negotiateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "invalid_payload", details: parsed.error.flatten() });
+    return;
+  }
+  const contract = resolveUtilityContract(parsed.data.utilityVersion);
+  if (!contract.isSupported) {
+    res.status(426).json({ supported: false, message: contract.message, requiredAction: "update_utility" });
+    return;
+  }
+  res.json({
+    supported: true,
+    apiVersion: contract.apiVersion,
+    message: contract.message,
+    featureCatalog: contract.featureCatalog
+  });
+});
+
+utilityRouter.post("/sync", (req, res) => {
+  const body = req.body ?? {};
+  if (body.app !== "OXYDRIVER") return res.status(400).json({ error: "invalid_app" });
+  const utilityVersion = String(body.utilityVersion || "").trim();
+  const accessKey = String(body.accessKey || "").trim();
+  if (!utilityVersion) return res.status(400).json({ error: "invalid_utility_version" });
+  if (!accessKey) return res.status(400).json({ error: "invalid_access_key" });
+
+  const tokenRecord = findTokenRecord(accessKey);
+  if (!tokenRecord || tokenRecord.revokedAt) return res.status(401).json({ error: "invalid_or_revoked_access_key" });
+
+  const contract = resolveUtilityContract(utilityVersion);
+  if (!contract.isSupported) return res.status(426).json({ error: "unsupported_utility_version", message: contract.message });
+
+  const utility = upsertUtility({
+    accessKey,
+    tokenId: tokenRecord.id,
+    utilityVersion,
+    apiVersion: contract.apiVersion || "v1",
+    tunnelUrl: body.tunnelUrl ? String(body.tunnelUrl) : null,
+    capabilities: typeof body.capabilities === "object" && body.capabilities ? body.capabilities : {},
+    selectedFeatures: Array.isArray(body.selectedFeatures) ? body.selectedFeatures.map(String) : []
+  });
+  touchToken(tokenRecord.id);
+  res.json({
+    ok: true,
+    utilityId: utility.id,
+    apiVersion: utility.apiVersion,
+    token: utility.accessKey,
+    capabilities: utility.capabilities,
+    featureCatalog: contract.featureCatalog,
+    selectedFeatures: utility.selectedFeatures || []
+  });
+});
+
+utilityRouter.post("/identify", (req, res) => {
+  const accessKey = String(req.body?.accessKey || "").trim();
+  if (!accessKey) return res.status(400).json({ error: "invalid_access_key" });
+  const tokenRecord = findTokenRecord(accessKey);
+  if (!tokenRecord || tokenRecord.revokedAt) return res.status(401).json({ error: "invalid_or_revoked_access_key" });
+  const utility = getUtilityByTokenId(tokenRecord.id);
+  if (!utility) return res.status(404).json({ error: "utility_not_found" });
+  res.json({
+    ok: true,
+    utility: {
+      id: utility.id,
+      utilityVersion: utility.utilityVersion,
+      apiVersion: utility.apiVersion,
+      tunnelUrl: utility.tunnelUrl,
+      lastSeenAt: utility.lastSeenAt
+    }
+  });
+});
+
