@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import Database from "better-sqlite3";
 import { config } from "../config";
+import { randomUUID } from "crypto";
 
 let db: Database.Database | null = null;
 
@@ -246,6 +247,44 @@ export async function pgBindClientToken(input: {
     `SELECT id, client_token, utility_id, created_at, updated_at
      FROM clients WHERE client_token = ? LIMIT 1`
   ).get(input.clientToken) as any;
+}
+
+export async function pgDeleteClientTokensForUtility(utilityId: string): Promise<number> {
+  await ensureUtilityClientStore();
+  const d = getDb();
+  const info = d.prepare(`DELETE FROM clients WHERE utility_id = ?`).run(utilityId);
+  return Number(info.changes || 0);
+}
+
+export async function pgRotateClientToken(input: {
+  utilityId: string;
+  newClientToken: string;
+  nowIso: string;
+}): Promise<{ deletedCount: number; bound: any }> {
+  await ensureUtilityClientStore();
+  const d = getDb();
+  const tx = d.transaction(() => {
+    const del = d.prepare(`DELETE FROM clients WHERE utility_id = ?`).run(input.utilityId);
+    const created = d.prepare(
+      `INSERT INTO clients (id, client_token, utility_id, created_at, updated_at)
+       VALUES (@id, @clientToken, @utilityId, @nowIso, @nowIso)
+       ON CONFLICT(client_token) DO UPDATE SET
+         utility_id = excluded.utility_id,
+         updated_at = excluded.updated_at`
+    ).run({
+      id: randomUUID(),
+      clientToken: input.newClientToken,
+      utilityId: input.utilityId,
+      nowIso: input.nowIso
+    });
+    void created;
+    const row = d.prepare(
+      `SELECT id, client_token, utility_id, created_at, updated_at
+       FROM clients WHERE client_token = ? LIMIT 1`
+    ).get(input.newClientToken) as any;
+    return { deletedCount: Number(del.changes || 0), bound: row };
+  });
+  return tx();
 }
 
 export async function pgResolveUtilityFromClientToken(clientToken: string) {
