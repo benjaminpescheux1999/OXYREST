@@ -12,14 +12,15 @@ const bindSchema = z.object({
   accessKey: z.string().min(1)
 });
 
-clientRouter.post("/bind", (req, res) => {
+clientRouter.post("/bind", async (req, res) => {
   const parsed = bindSchema.safeParse(req.body ?? {});
   if (!parsed.success) return res.status(400).json({ error: "invalid_payload", details: parsed.error.flatten() });
-  const tokenRecord = findTokenRecord(parsed.data.accessKey);
+  const tokenRecord = await findTokenRecord(parsed.data.accessKey);
   if (!tokenRecord || tokenRecord.revokedAt) return res.status(401).json({ error: "invalid_or_revoked_access_key" });
-  const utility = getUtilityByTokenId(tokenRecord.id);
+  const utility = await getUtilityByTokenId(tokenRecord.id);
   if (!utility) return res.status(404).json({ error: "utility_not_found" });
-  const client = bindClientToken(parsed.data.clientToken, utility.id);
+  const client = await bindClientToken(parsed.data.clientToken, utility.id);
+  if (!client) return res.status(500).json({ error: "client_bind_failed" });
   return res.json({ ok: true, clientId: client.id, utilityId: client.utilityId });
 });
 

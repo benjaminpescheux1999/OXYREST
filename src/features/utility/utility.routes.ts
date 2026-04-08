@@ -30,7 +30,7 @@ utilityRouter.post("/negotiate", (req, res) => {
   });
 });
 
-utilityRouter.post("/sync", (req, res) => {
+utilityRouter.post("/sync", async (req, res) => {
   const body = req.body ?? {};
   if (body.app !== "OXYDRIVER") return res.status(400).json({ error: "invalid_app" });
   const utilityVersion = String(body.utilityVersion || "").trim();
@@ -38,13 +38,13 @@ utilityRouter.post("/sync", (req, res) => {
   if (!utilityVersion) return res.status(400).json({ error: "invalid_utility_version" });
   if (!accessKey) return res.status(400).json({ error: "invalid_access_key" });
 
-  const tokenRecord = findTokenRecord(accessKey);
+  const tokenRecord = await findTokenRecord(accessKey);
   if (!tokenRecord || tokenRecord.revokedAt) return res.status(401).json({ error: "invalid_or_revoked_access_key" });
 
   const contract = resolveUtilityContract(utilityVersion);
   if (!contract.isSupported) return res.status(426).json({ error: "unsupported_utility_version", message: contract.message });
 
-  const utility = upsertUtility({
+  const utility = await upsertUtility({
     accessKey,
     tokenId: tokenRecord.id,
     utilityVersion,
@@ -53,7 +53,8 @@ utilityRouter.post("/sync", (req, res) => {
     capabilities: typeof body.capabilities === "object" && body.capabilities ? body.capabilities : {},
     selectedFeatures: Array.isArray(body.selectedFeatures) ? body.selectedFeatures.map(String) : []
   });
-  touchToken(tokenRecord.id);
+  await touchToken(tokenRecord.id);
+  if (!utility) return res.status(500).json({ error: "utility_upsert_failed" });
   res.json({
     ok: true,
     utilityId: utility.id,
@@ -65,12 +66,12 @@ utilityRouter.post("/sync", (req, res) => {
   });
 });
 
-utilityRouter.post("/identify", (req, res) => {
+utilityRouter.post("/identify", async (req, res) => {
   const accessKey = String(req.body?.accessKey || "").trim();
   if (!accessKey) return res.status(400).json({ error: "invalid_access_key" });
-  const tokenRecord = findTokenRecord(accessKey);
+  const tokenRecord = await findTokenRecord(accessKey);
   if (!tokenRecord || tokenRecord.revokedAt) return res.status(401).json({ error: "invalid_or_revoked_access_key" });
-  const utility = getUtilityByTokenId(tokenRecord.id);
+  const utility = await getUtilityByTokenId(tokenRecord.id);
   if (!utility) return res.status(404).json({ error: "utility_not_found" });
   res.json({
     ok: true,

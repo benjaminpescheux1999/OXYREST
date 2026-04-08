@@ -53,6 +53,7 @@ export const config = {
   minSupportedUtilityVersion: "0.1.0.0",
   adminApiKey: process.env.ADMIN_API_KEY || "dev-admin-key-change-me",
   tokenPepper: process.env.TOKEN_PEPPER || "dev-pepper-change-me",
+  databasePath: process.env.DATABASE_PATH || "",
   utilityLatestVersion: process.env.UTILITY_LATEST_VERSION || "0.1.0.1",
   utilityDownloadUrl: process.env.UTILITY_DOWNLOAD_URL || "",
   utilityReleaseNotesUrl: process.env.UTILITY_RELEASE_NOTES_URL || "",

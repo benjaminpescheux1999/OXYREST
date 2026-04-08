@@ -2,6 +2,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import { config } from "../../config";
 import { compareSemver } from "../../utils/semver";
+import { resolveDatabaseFilePath } from "../../infra/token-store";
 
 export const systemRouter = Router();
 
@@ -90,6 +91,14 @@ systemRouter.get("/health", (_req, res) => {
 
 systemRouter.get("/versions", (_req, res) => {
   res.json({ apiVersions: config.apiVersions, minSupportedUtilityVersion: config.minSupportedUtilityVersion });
+});
+
+systemRouter.get("/storage", (_req, res) => {
+  res.json({
+    ok: true,
+    engine: "sqlite",
+    databaseFilePath: resolveDatabaseFilePath()
+  });
 });
 
 systemRouter.get("/utility-update", (req, res) => {

@@ -32,6 +32,7 @@ Variables d'environnement utiles:
 
 - `ADMIN_API_KEY` (defaut dev: `dev-admin-key-change-me`)
 - `TOKEN_PEPPER` (defaut dev: `dev-pepper-change-me`)
+- `DATABASE_PATH` (chemin du fichier SQLite, ex: `./data/oxyrest.db`)
 - `UTILITY_DOWNLOADS_JSON` (catalogue multi-version des binaires utilitaire)
 - `SFTP_*` (si tu actives le telechargement SFTP chiffre pour l'update)
 
@@ -120,7 +121,15 @@ headers: { "x-client-token": "token-client-espace-brest" }
 
 ## Stockage
 
-Stockage local JSON dans `./data/db.json`.
+Stockage:
+
+- Base SQLite unique: `DATABASE_PATH` (defaut: `./data/oxyrest.db`)
+
+### Lire la base dans DBeaver
+
+1. DBeaver -> New Connection -> SQLite
+2. "Database file" -> selectionner `./data/oxyrest.db`
+3. Tables: `api_tokens`, `utilities`, `clients`
 
 ## GitHub (publier le repo API seul)
 

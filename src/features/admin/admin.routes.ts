@@ -11,13 +11,13 @@ const createSchema = z.object({
   scopes: z.array(z.string()).optional()
 });
 
-adminRouter.post("/tokens", (req, res) => {
+adminRouter.post("/tokens", async (req, res) => {
   const parsed = createSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     res.status(400).json({ error: "invalid_payload", details: parsed.error.flatten() });
     return;
   }
-  const created = createLabeledToken(parsed.data.label, parsed.data.scopes ?? ["sync", "proxy"]);
+  const created = await createLabeledToken(parsed.data.label, parsed.data.scopes ?? ["sync", "proxy"]);
   res.status(201).json({
     ok: true,
     token: created.token,
@@ -31,12 +31,12 @@ adminRouter.post("/tokens", (req, res) => {
   });
 });
 
-adminRouter.get("/tokens", (_req, res) => {
-  res.json({ ok: true, items: listTokens() });
+adminRouter.get("/tokens", async (_req, res) => {
+  res.json({ ok: true, items: await listTokens() });
 });
 
-adminRouter.post("/tokens/:tokenId/revoke", (req, res) => {
-  const token = revokeToken(req.params.tokenId);
+adminRouter.post("/tokens/:tokenId/revoke", async (req, res) => {
+  const token = await revokeToken(req.params.tokenId);
   if (!token) {
     res.status(404).json({ error: "token_not_found" });
     return;

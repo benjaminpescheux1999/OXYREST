@@ -1,6 +1,13 @@
 import crypto, { randomUUID } from "crypto";
 import { config } from "../../config";
-import { readDb, writeDb } from "../../infra/db";
+import {
+  ensureTokenStore,
+  pgCreateToken,
+  pgFindByHash,
+  pgListTokens,
+  pgRevokeToken,
+  pgTouchToken
+} from "../../infra/token-store";
 
 function sha256(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -11,26 +18,15 @@ function tokenHash(plain: string): string {
 }
 
 export function generateToken(): { token: string; recordId: string } {
-  const db = readDb();
   const token = `ox_live_${crypto.randomBytes(24).toString("base64url")}`;
   const now = new Date().toISOString();
   const id = randomUUID();
-  db.apiTokens.push({
-    id,
-    label: "client",
-    tokenPrefix: token.slice(0, 18),
-    tokenHash: tokenHash(token),
-    scopes: ["sync", "proxy"],
-    revokedAt: null,
-    createdAt: now,
-    lastUsedAt: null
-  });
-  writeDb(db);
+  void now;
+  // Legacy helper kept for completeness; Postgres-only mode uses createLabeledToken().
   return { token, recordId: id };
 }
 
-export function createLabeledToken(label: string, scopes: string[]): { token: string; meta: any } {
-  const db = readDb();
+export async function createLabeledToken(label: string, scopes: string[]): Promise<{ token: string; meta: any }> {
   const token = `ox_live_${crypto.randomBytes(24).toString("base64url")}`;
   const now = new Date().toISOString();
   const id = randomUUID();
@@ -44,44 +40,54 @@ export function createLabeledToken(label: string, scopes: string[]): { token: st
     createdAt: now,
     lastUsedAt: null as string | null
   };
-  db.apiTokens.push(rec);
-  writeDb(db);
+  await ensureTokenStore();
+  await pgCreateToken(rec);
   return { token, meta: rec };
 }
 
-export function findTokenRecord(plainToken: string) {
-  const db = readDb();
+export async function findTokenRecord(plainToken: string) {
   const hash = tokenHash(plainToken.trim());
-  return db.apiTokens.find((x) => x.tokenHash === hash) || null;
+  await ensureTokenStore();
+  const row = await pgFindByHash(hash);
+  if (!row) return null;
+  return {
+    id: String(row.id),
+    label: String(row.label),
+    tokenPrefix: String(row.token_prefix),
+    tokenHash: String(row.token_hash),
+    scopes: Array.isArray(row.scopes) ? row.scopes.map(String) : [],
+    revokedAt: row.revoked_at ? new Date(row.revoked_at).toISOString() : null,
+    createdAt: new Date(row.created_at).toISOString(),
+    lastUsedAt: row.last_used_at ? new Date(row.last_used_at).toISOString() : null
+  };
 }
 
-export function touchToken(id: string): void {
-  const db = readDb();
-  const token = db.apiTokens.find((x) => x.id === id);
-  if (!token) return;
-  token.lastUsedAt = new Date().toISOString();
-  writeDb(db);
+export async function touchToken(id: string): Promise<void> {
+  await ensureTokenStore();
+  await pgTouchToken(id);
 }
 
-export function listTokens() {
-  const db = readDb();
-  return db.apiTokens.map((t) => ({
-    id: t.id,
-    label: t.label,
-    tokenPrefix: t.tokenPrefix,
-    scopes: t.scopes,
-    revokedAt: t.revokedAt,
-    createdAt: t.createdAt,
-    lastUsedAt: t.lastUsedAt
+export async function listTokens() {
+  await ensureTokenStore();
+  const rows = await pgListTokens();
+  return rows.map((t) => ({
+    id: String(t.id),
+    label: String(t.label),
+    tokenPrefix: String(t.token_prefix),
+    scopes: Array.isArray(t.scopes) ? t.scopes.map(String) : [],
+    revokedAt: t.revoked_at ? new Date(t.revoked_at).toISOString() : null,
+    createdAt: new Date(t.created_at).toISOString(),
+    lastUsedAt: t.last_used_at ? new Date(t.last_used_at).toISOString() : null
   }));
 }
 
-export function revokeToken(id: string) {
-  const db = readDb();
-  const token = db.apiTokens.find((t) => t.id === id);
-  if (!token) return null;
-  token.revokedAt = new Date().toISOString();
-  writeDb(db);
-  return token;
+export async function revokeToken(id: string) {
+  await ensureTokenStore();
+  const row = await pgRevokeToken(id);
+  if (!row) return null;
+  return {
+    id: String(row.id),
+    revokedAt: row.revoked_at ? new Date(row.revoked_at).toISOString() : null
+  };
 }
 
