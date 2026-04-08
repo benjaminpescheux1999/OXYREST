@@ -8,5 +8,6 @@ export interface ClientRouteContext {
 
 export interface ClientMethods {
   getClient: (ctx: ClientRouteContext) => Promise<void>;
+  getClientFactures: (ctx: ClientRouteContext) => Promise<void>;
   getFacture: (ctx: ClientRouteContext) => Promise<void>;
 }

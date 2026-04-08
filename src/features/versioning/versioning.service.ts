@@ -58,12 +58,49 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended"): Featur
     name: "Espace client",
     code: "espace_client",
     description: "Expose les donnees client pour espace web client final.",
-    endpoints: ["GET /client/espace-client/client/:clientId"],
+    endpoints: [
+      "GET /client/espace-client/client/:clientId",
+      "GET /client/espace-client/client/:clientId/factures",
+      "GET /client/espace-client/facture/:factureId"
+    ],
     resources: [
       {
         database: "SA_GAZSRV",
         table: "CLIEN",
         columns: columnProfile === "extended" ? extendedColumns : minimalColumns
+      },
+      {
+        database: "SA_GAZSRV",
+        table: "FACTU",
+        columns: [
+          { name: "CLE", rights: ["read"] },
+          { name: "TYPE", rights: ["read"] },
+          { name: "CLIEN", rights: ["read"] },
+          { name: "NOM", rights: ["read"] },
+          { name: "ADRES_1_", rights: ["read"] },
+          { name: "ADRES_2_", rights: ["read"] },
+          { name: "ADRES_3_", rights: ["read"] },
+          { name: "TOHT", rights: ["read"] },
+          { name: "TOTVA", rights: ["read"] },
+          { name: "TOTTC", rights: ["read"] }
+        ]
+      },
+      {
+        database: "SA_GAZSRV",
+        table: "CORFA",
+        columns: [
+          { name: "CLE", rights: ["read"] },
+          { name: "DESIG", rights: ["read"] },
+          { name: "QUANT", rights: ["read"] },
+          { name: "PRIBR", rights: ["read"] },
+          { name: "REMIS", rights: ["read"] },
+          { name: "PRINE", rights: ["read"] },
+          { name: "PAYEU", rights: ["read"] },
+          { name: "DATEF", rights: ["read"] },
+          { name: "TATVA", rights: ["read"] },
+          { name: "MONTA", rights: ["read"] },
+          { name: "TTC", rights: ["read"] }
+        ]
       }
     ]
   };

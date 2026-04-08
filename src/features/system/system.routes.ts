@@ -50,10 +50,10 @@ function buildUtilityUpdatePayload(currentVersionRaw: unknown, accessKeyRaw?: un
         releaseNotesUrl: config.utilityReleaseNotesUrl || undefined
       }
     : null;
-  const mergedCatalog = fallback ? [...catalog, fallback] : catalog;
+  const mergedCatalog = (fallback ? [...catalog, fallback] : catalog).sort((a, b) => compareSemver(a.version, b.version));
   const latest = mergedCatalog.length > 0 ? mergedCatalog[mergedCatalog.length - 1] : null;
   const target = currentVersion
-    ? mergedCatalog.find((x) => compareSemver(x.version, currentVersion) > 0) ?? null
+    ? (latest && compareSemver(latest.version, currentVersion) > 0 ? latest : null)
     : latest;
   const targetDownloadUrl = target?.url?.trim() || "";
   const fallbackDownloadUrl = (config.utilityDownloadUrl || "").trim();

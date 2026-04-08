@@ -18,6 +18,10 @@ export const baseV100Controller: ClientMethods = {
     const clientId = String(ctx.req.params.clientId || "").trim();
     await proxyToUtility(ctx, "/espace-client/client-summary", { clientId });
   },
+  async getClientFactures(ctx) {
+    const clientId = String(ctx.req.params.clientId || "").trim();
+    await proxyToUtility(ctx, "/espace-client/factures", { clientId });
+  },
   async getFacture(ctx) {
     const factureId = String(ctx.req.params.factureId || "").trim();
     await proxyToUtility(ctx, "/espace-client/facture-summary", { factureId });

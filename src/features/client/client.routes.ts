@@ -32,6 +32,16 @@ clientRouter.get("/espace-client/client/:clientId", resolveClientUtility, async 
   }
 });
 
+clientRouter.get("/espace-client/client/:clientId/factures", resolveClientUtility, async (req: ClientUtilityRequest, res) => {
+  const utility = req.clientUtility!;
+  const controller = resolveClientController(utility.apiVersion);
+  try {
+    await controller.getClientFactures({ req, res, utility });
+  } catch (err) {
+    res.status(502).json({ error: "proxy_failed", message: err instanceof Error ? err.message : "unknown_error" });
+  }
+});
+
 clientRouter.get("/espace-client/facture/:factureId", resolveClientUtility, async (req: ClientUtilityRequest, res) => {
   const utility = req.clientUtility!;
   const controller = resolveClientController(utility.apiVersion);

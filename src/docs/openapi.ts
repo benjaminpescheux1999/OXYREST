@@ -215,10 +215,19 @@ export const openApiDocument = {
         responses: { "200": { description: "Client trouvé" }, "502": { description: "Erreur proxy utilitaire" } }
       }
     },
+    "/client/espace-client/client/{clientId}/factures": {
+      get: {
+        tags: ["Client"],
+        summary: "Lister les factures d'un client (FACTU)",
+        security: [{ ClientTokenHeader: [] }, { ClientAccessBearer: [] }],
+        parameters: [{ name: "clientId", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Factures trouvées" }, "502": { description: "Erreur proxy utilitaire" } }
+      }
+    },
     "/client/espace-client/facture/{factureId}": {
       get: {
         tags: ["Client"],
-        summary: "Récupérer une facture (proxy vers utilitaire)",
+        summary: "Récupérer le détail d'une facture (FACTU + CORFA)",
         security: [{ ClientTokenHeader: [] }],
         parameters: [{ name: "factureId", in: "path", required: true, schema: { type: "string" } }],
         responses: { "200": { description: "Facture trouvée" }, "502": { description: "Erreur proxy utilitaire" } }
