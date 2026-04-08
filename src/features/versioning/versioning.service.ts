@@ -35,8 +35,25 @@ const versionPolicies: UtilityVersionPolicy[] = [
   }
 ];
 
-function buildEspaceClientFeature(includeTeldo: boolean): FeatureDefinition {
-  const extraColumns: FeatureColumnRight[] = includeTeldo ? [{ name: "TELDO", rights: ["read"] }] : [];
+function buildEspaceClientFeature(columnProfile: "minimal" | "extended"): FeatureDefinition {
+  const minimalColumns: FeatureColumnRight[] = [
+    { name: "CLIEN", rights: ["read"] },
+    { name: "NOM", rights: ["read"] },
+    { name: "PRENO", rights: ["read"] }
+  ];
+  const extendedColumns: FeatureColumnRight[] = [
+    ...minimalColumns,
+    { name: "TELDO", rights: ["read"] },
+    { name: "TELPO", rights: ["read"] },
+    { name: "TELTR", rights: ["read"] },
+    { name: "CONTR", rights: ["read"] },
+    { name: "NUMRU", rights: ["read"] },
+    { name: "QUARU", rights: ["read"] },
+    { name: "RUE1", rights: ["read"] },
+    { name: "VILLE", rights: ["read"] },
+    { name: "CODPO", rights: ["read"] },
+    { name: "RENOU", rights: ["read"] }
+  ];
   return {
     name: "Espace client",
     code: "espace_client",
@@ -46,12 +63,7 @@ function buildEspaceClientFeature(includeTeldo: boolean): FeatureDefinition {
       {
         database: "SA_GAZSRV",
         table: "CLIEN",
-        columns: [
-          { name: "CLIEN", rights: ["read"] },
-          { name: "NOM", rights: ["read"] },
-          { name: "PRENO", rights: ["read"] },
-          ...extraColumns
-        ]
+        columns: columnProfile === "extended" ? extendedColumns : minimalColumns
       }
     ]
   };
@@ -60,9 +72,9 @@ function buildEspaceClientFeature(includeTeldo: boolean): FeatureDefinition {
 function buildFeatureCatalog(featureSet: FeatureSetId): FeatureDefinition[] {
   switch (featureSet) {
     case "espace_client_v100":
-      return [buildEspaceClientFeature(false)];
+      return [buildEspaceClientFeature("minimal")];
     case "espace_client_v101_plus":
-      return [buildEspaceClientFeature(true)];
+      return [buildEspaceClientFeature("extended")];
     default:
       return [];
   }
