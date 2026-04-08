@@ -6,6 +6,11 @@ export type UtilityDownloadEntry = {
   releaseNotesUrl?: string;
 };
 
+function isInstallerUrl(url: string): boolean {
+  const normalized = url.trim().toLowerCase();
+  return normalized.endsWith(".exe") || normalized.endsWith(".msi");
+}
+
 function parseUtilityDownloads(raw: string | undefined): UtilityDownloadEntry[] {
   if (!raw) return [];
   try {
@@ -32,15 +37,21 @@ function parseUtilityDownloads(raw: string | undefined): UtilityDownloadEntry[] 
 
 function mergeUtilityDownloads(primary: UtilityDownloadEntry[], secondary: UtilityDownloadEntry[]): UtilityDownloadEntry[] {
   const byVersion = new Map<string, UtilityDownloadEntry>();
-  for (const x of secondary) byVersion.set(x.version, x);
-  for (const x of primary) byVersion.set(x.version, x);
+  for (const x of secondary) {
+    if (!isInstallerUrl(x.url)) continue;
+    byVersion.set(x.version, x);
+  }
+  for (const x of primary) {
+    if (!isInstallerUrl(x.url)) continue;
+    byVersion.set(x.version, x);
+  }
   return [...byVersion.values()];
 }
 
 const defaultUtilityDownloadsJson = JSON.stringify([
-  { version: "0.1.0.0", url: "sftp://ftp.cluster026.hosting.ovh.net/BENJAMIN/OXYDRIVER-0.1.0.0-win-x64.zip" },
-  { version: "0.1.0.1", url: "sftp://ftp.cluster026.hosting.ovh.net/BENJAMIN/OXYDRIVER-0.1.0.1-win-x64.zip" },
-  { version: "0.1.0.2", url: "sftp://ftp.cluster026.hosting.ovh.net/BENJAMIN/OXYDRIVER-0.1.0.2-win-x64.zip" }
+  { version: "0.1.0.0", url: "sftp://ftp.cluster026.hosting.ovh.net/BENJAMIN/OXYDRIVER-Setup-0.1.0.0.exe" },
+  { version: "0.1.0.1", url: "sftp://ftp.cluster026.hosting.ovh.net/BENJAMIN/OXYDRIVER-Setup-0.1.0.1.exe" },
+  { version: "0.1.0.2", url: "sftp://ftp.cluster026.hosting.ovh.net/BENJAMIN/OXYDRIVER-Setup-0.1.0.2.exe" }
 ]);
 const defaultUtilityDownloads = parseUtilityDownloads(defaultUtilityDownloadsJson);
 const envUtilityDownloads = parseUtilityDownloads(process.env.UTILITY_DOWNLOADS_JSON);
