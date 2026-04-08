@@ -82,6 +82,38 @@ export async function ensureUtilityClientStore(): Promise<void> {
   `);
 }
 
+export async function ensureEspaceClientAuthStore(): Promise<void> {
+  const d = getDb();
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS espace_client_accounts (
+      id TEXT PRIMARY KEY,
+      utility_id TEXT NOT NULL,
+      client_code TEXT NOT NULL,
+      username TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(utility_id, client_code),
+      UNIQUE(utility_id, username),
+      FOREIGN KEY (utility_id) REFERENCES utilities(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_espace_client_accounts_utility ON espace_client_accounts (utility_id);
+
+    CREATE TABLE IF NOT EXISTS espace_client_sessions (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL,
+      refresh_token_hash TEXT NOT NULL UNIQUE,
+      user_agent TEXT NULL,
+      ip_address TEXT NULL,
+      expires_at TEXT NOT NULL,
+      revoked_at TEXT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (account_id) REFERENCES espace_client_accounts(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_espace_client_sessions_account ON espace_client_sessions (account_id);
+  `);
+}
+
 export async function pgCreateToken(input: {
   id: string;
   label: string;
@@ -298,4 +330,109 @@ export async function pgResolveUtilityFromClientToken(clientToken: string) {
      WHERE c.client_token = ?
      LIMIT 1`
   ).get(clientToken) as any;
+}
+
+export async function pgUpsertEspaceClientAccount(input: {
+  utilityId: string;
+  clientCode: string;
+  username: string;
+  passwordHash: string;
+  nowIso: string;
+}) {
+  await ensureEspaceClientAuthStore();
+  const d = getDb();
+  d.prepare(
+    `INSERT INTO espace_client_accounts (id, utility_id, client_code, username, password_hash, created_at, updated_at)
+     VALUES (@id, @utilityId, @clientCode, @username, @passwordHash, @nowIso, @nowIso)
+     ON CONFLICT(utility_id, client_code) DO UPDATE SET
+       username = excluded.username,
+       password_hash = excluded.password_hash,
+       updated_at = excluded.updated_at`
+  ).run({
+    id: randomUUID(),
+    utilityId: input.utilityId,
+    clientCode: input.clientCode,
+    username: input.username,
+    passwordHash: input.passwordHash,
+    nowIso: input.nowIso
+  });
+  return d.prepare(
+    `SELECT id, utility_id, client_code, username, password_hash, created_at, updated_at
+     FROM espace_client_accounts
+     WHERE utility_id = ? AND client_code = ? LIMIT 1`
+  ).get(input.utilityId, input.clientCode) as any;
+}
+
+export async function pgFindEspaceClientAccountByUsername(input: { utilityId: string; username: string }) {
+  await ensureEspaceClientAuthStore();
+  const d = getDb();
+  return d.prepare(
+    `SELECT id, utility_id, client_code, username, password_hash, created_at, updated_at
+     FROM espace_client_accounts
+     WHERE utility_id = ? AND username = ? LIMIT 1`
+  ).get(input.utilityId, input.username) as any;
+}
+
+export async function pgFindEspaceClientAccountById(id: string) {
+  await ensureEspaceClientAuthStore();
+  const d = getDb();
+  return d.prepare(
+    `SELECT id, utility_id, client_code, username, password_hash, created_at, updated_at
+     FROM espace_client_accounts
+     WHERE id = ? LIMIT 1`
+  ).get(id) as any;
+}
+
+export async function pgCreateEspaceClientSession(input: {
+  accountId: string;
+  refreshTokenHash: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  expiresAt: string;
+  nowIso: string;
+}) {
+  await ensureEspaceClientAuthStore();
+  const d = getDb();
+  const id = randomUUID();
+  d.prepare(
+    `INSERT INTO espace_client_sessions (
+      id, account_id, refresh_token_hash, user_agent, ip_address, expires_at, revoked_at, created_at
+    ) VALUES (
+      @id, @accountId, @refreshTokenHash, @userAgent, @ipAddress, @expiresAt, NULL, @nowIso
+    )`
+  ).run({
+    id,
+    accountId: input.accountId,
+    refreshTokenHash: input.refreshTokenHash,
+    userAgent: input.userAgent,
+    ipAddress: input.ipAddress,
+    expiresAt: input.expiresAt,
+    nowIso: input.nowIso
+  });
+  return d.prepare(
+    `SELECT id, account_id, refresh_token_hash, user_agent, ip_address, expires_at, revoked_at, created_at
+     FROM espace_client_sessions WHERE id = ? LIMIT 1`
+  ).get(id) as any;
+}
+
+export async function pgFindEspaceClientSessionByRefreshHash(refreshTokenHash: string) {
+  await ensureEspaceClientAuthStore();
+  const d = getDb();
+  return d.prepare(
+    `SELECT id, account_id, refresh_token_hash, user_agent, ip_address, expires_at, revoked_at, created_at
+     FROM espace_client_sessions
+     WHERE refresh_token_hash = ? LIMIT 1`
+  ).get(refreshTokenHash) as any;
+}
+
+export async function pgRevokeEspaceClientSession(id: string, nowIso: string): Promise<void> {
+  await ensureEspaceClientAuthStore();
+  const d = getDb();
+  d.prepare(`UPDATE espace_client_sessions SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ?`).run(nowIso, id);
+}
+
+export async function pgRotateEspaceClientSessionRefreshToken(input: { sessionId: string; newRefreshTokenHash: string }): Promise<void> {
+  await ensureEspaceClientAuthStore();
+  const d = getDb();
+  d.prepare(`UPDATE espace_client_sessions SET refresh_token_hash = ? WHERE id = ?`).run(input.newRefreshTokenHash, input.sessionId);
 }

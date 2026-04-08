@@ -74,6 +74,16 @@ export const config = {
   sftpUsername: process.env.SFTP_USERNAME || "",
   sftpPassword: process.env.SFTP_PASSWORD || "",
   sftpRemoteBasePath: process.env.SFTP_REMOTE_BASE_PATH || "",
-  updateCryptoIterations: Number(process.env.UPDATE_CRYPTO_ITERATIONS || 120000)
+  updateCryptoIterations: Number(process.env.UPDATE_CRYPTO_ITERATIONS || 120000),
+  frontendOrigin: process.env.FRONTEND_ORIGIN || "",
+  espaceClientJwtSecret: process.env.ESPACE_CLIENT_JWT_SECRET || "dev-espace-client-secret",
+  espaceClientAccessTtlSec: Number(process.env.ESPACE_CLIENT_ACCESS_TTL_SEC || 900),
+  espaceClientRefreshTtlSec: Number(process.env.ESPACE_CLIENT_REFRESH_TTL_SEC || 2592000),
+  smtpHost: process.env.SMTP_HOST || "",
+  smtpPort: Number(process.env.SMTP_PORT || 587),
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPass: process.env.SMTP_PASS || "",
+  alertEmailTo: process.env.ALERT_EMAIL_TO || "benjamin@info-tec.fr",
+  alertEmailFrom: process.env.ALERT_EMAIL_FROM || "oxyrest@localhost"
 };
 

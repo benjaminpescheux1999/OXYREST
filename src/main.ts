@@ -1,11 +1,12 @@
 import "dotenv/config";
 import { createApp } from "./app";
 import { config } from "./config";
-import { ensureTokenStore, ensureUtilityClientStore, resolveDatabaseFilePath } from "./infra/token-store";
+import { ensureEspaceClientAuthStore, ensureTokenStore, ensureUtilityClientStore, resolveDatabaseFilePath } from "./infra/token-store";
 
 async function bootstrap() {
   await ensureTokenStore();
   await ensureUtilityClientStore();
+  await ensureEspaceClientAuthStore();
   console.log(`SQLite storage enabled at ${resolveDatabaseFilePath()}.`);
   const app = createApp();
   app.listen(config.port, () => {

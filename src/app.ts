@@ -1,11 +1,19 @@
 import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
 import { systemRouter } from "./features/system/system.routes";
 import { utilityRouter } from "./features/utility/utility.routes";
 import { clientRouter } from "./features/client/client.routes";
 import { adminRouter } from "./features/admin/admin.routes";
+import { config } from "./config";
 
 export function createApp() {
   const app = express();
+  app.use(cors({
+    origin: config.frontendOrigin ? [config.frontendOrigin] : true,
+    credentials: true
+  }));
+  app.use(cookieParser());
   app.use(express.json({ limit: "2mb" }));
 
   app.use((req, _res, next) => {
