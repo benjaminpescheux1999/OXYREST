@@ -6,6 +6,7 @@ import { utilityRouter } from "./features/utility/utility.routes";
 import { clientRouter } from "./features/client/client.routes";
 import { adminRouter } from "./features/admin/admin.routes";
 import { config } from "./config";
+import { registerSwagger } from "./docs/swagger";
 
 export function createApp() {
   const app = express();
@@ -26,6 +27,8 @@ export function createApp() {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
     next();
   });
+
+  registerSwagger(app);
 
   app.use("/system", systemRouter);
   app.use("/utility", utilityRouter);

@@ -16,7 +16,7 @@ const rotateSchema = z.object({
 
 export async function bindClientTokenHandler(req: Request, res: Response) {
   const parsed = bindSchema.safeParse(req.body ?? {});
-  if (!parsed.success) return res.status(400).json({ error: "invalid_payload", details: parsed.error.flatten() });
+  if (!parsed.success) return res.status(400).json({ error: "invalid_payload", details: parsed.error.issues });
   const tokenRecord = await findTokenRecord(parsed.data.accessKey);
   if (!tokenRecord || tokenRecord.revokedAt) return res.status(401).json({ error: "invalid_or_revoked_access_key" });
   const utility = await getUtilityByTokenId(tokenRecord.id);
@@ -28,7 +28,7 @@ export async function bindClientTokenHandler(req: Request, res: Response) {
 
 export async function rotateClientTokenHandler(req: Request, res: Response) {
   const parsed = rotateSchema.safeParse(req.body ?? {});
-  if (!parsed.success) return res.status(400).json({ error: "invalid_payload", details: parsed.error.flatten() });
+  if (!parsed.success) return res.status(400).json({ error: "invalid_payload", details: parsed.error.issues });
   const tokenRecord = await findTokenRecord(parsed.data.accessKey);
   if (!tokenRecord || tokenRecord.revokedAt) return res.status(401).json({ error: "invalid_or_revoked_access_key" });
   const utility = await getUtilityByTokenId(tokenRecord.id);

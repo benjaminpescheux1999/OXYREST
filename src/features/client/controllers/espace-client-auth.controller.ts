@@ -88,7 +88,7 @@ function setRefreshCookie(res: Response, refreshToken: string) {
   res.cookie(REFRESH_COOKIE, refreshToken, {
     httpOnly: true,
     secure: true,
-    sameSite: "lax",
+    sameSite: "none",
     maxAge: refreshCookieMaxAgeMs,
     path: "/client/espace-client/auth"
   });
@@ -98,7 +98,7 @@ export function clearRefreshCookie(res: Response) {
   res.clearCookie(REFRESH_COOKIE, {
     httpOnly: true,
     secure: true,
-    sameSite: "lax",
+    sameSite: "none",
     path: "/client/espace-client/auth"
   });
 }
