@@ -48,6 +48,25 @@ function mergeUtilityDownloads(primary: UtilityDownloadEntry[], secondary: Utili
   return [...byVersion.values()];
 }
 
+function parseOriginList(raw: string | undefined): string[] {
+  if (!raw || !raw.trim()) return [];
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.map((x) => String(x).trim()).filter(Boolean);
+      }
+    } catch {
+      // fallback to comma/newline parsing
+    }
+  }
+  return trimmed
+    .split(/[\n,;]+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
 const defaultUtilityDownloadsJson = JSON.stringify([
   { version: "0.1.0.0", url: "sftp://ftp.cluster026.hosting.ovh.net/BENJAMIN/OXYDRIVER-Setup-0.1.0.0.exe" },
   { version: "0.1.0.1", url: "sftp://ftp.cluster026.hosting.ovh.net/BENJAMIN/OXYDRIVER-Setup-0.1.0.1.exe" },
@@ -56,6 +75,10 @@ const defaultUtilityDownloadsJson = JSON.stringify([
 const defaultUtilityDownloads = parseUtilityDownloads(defaultUtilityDownloadsJson);
 const envUtilityDownloads = parseUtilityDownloads(process.env.UTILITY_DOWNLOADS_JSON);
 const utilityDownloads = mergeUtilityDownloads(envUtilityDownloads, defaultUtilityDownloads);
+const frontendOrigins = [
+  ...parseOriginList(process.env.FRONTEND_ORIGINS),
+  ...parseOriginList(process.env.FRONTEND_ORIGIN)
+];
 
 export const config = {
   port: Number(process.env.PORT || 8080),
@@ -76,6 +99,7 @@ export const config = {
   sftpRemoteBasePath: process.env.SFTP_REMOTE_BASE_PATH || "",
   updateCryptoIterations: Number(process.env.UPDATE_CRYPTO_ITERATIONS || 120000),
   frontendOrigin: process.env.FRONTEND_ORIGIN || "",
+  frontendOrigins: [...new Set(frontendOrigins)],
   espaceClientJwtSecret: process.env.ESPACE_CLIENT_JWT_SECRET || "dev-espace-client-secret",
   espaceClientAccessTtlSec: Number(process.env.ESPACE_CLIENT_ACCESS_TTL_SEC || 900),
   espaceClientRefreshTtlSec: Number(process.env.ESPACE_CLIENT_REFRESH_TTL_SEC || 2592000),

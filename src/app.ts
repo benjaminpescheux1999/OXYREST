@@ -9,8 +9,14 @@ import { config } from "./config";
 
 export function createApp() {
   const app = express();
+  const allowedOrigins = config.frontendOrigins;
   app.use(cors({
-    origin: config.frontendOrigin ? [config.frontendOrigin] : true,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.length === 0) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS origin not allowed: ${origin}`));
+    },
     credentials: true
   }));
   app.use(cookieParser());
