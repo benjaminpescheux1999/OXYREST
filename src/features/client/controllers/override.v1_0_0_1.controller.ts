@@ -31,6 +31,7 @@ function normalizeClientResponse(parsed: unknown) {
       telephoneDomicile: pickString(data, ["telephoneDomicile", "TELDO"]),
       telephonePortable: pickString(data, ["telephonePortable", "TELPO"]),
       telephoneTravail: pickString(data, ["telephoneTravail", "TELTR"]),
+      email: pickString(data, ["email", "EMAIL"]),
       sousContrat: pickBoolean(data, ["sousContrat", "CONTR"]),
       numeroRue: pickString(data, ["numeroRue", "NUMRU"]),
       qualiteAdresse: pickString(data, ["qualiteAdresse", "QUARU"]),

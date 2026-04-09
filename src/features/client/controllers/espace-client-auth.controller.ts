@@ -111,9 +111,26 @@ async function fetchClientIdentityForProvision(utility: { tunnelUrl: string | nu
   if (!utility.tunnelUrl) return null;
   const qs = new URLSearchParams({ clientId: clientCode }).toString();
   const url = `${utility.tunnelUrl}/espace-client/client-summary?${qs}`;
-  const resp = await fetch(url, { method: "GET", headers: { "x-oxydriver-key": utility.accessKey } });
-  const txt = await resp.text();
-  try { return JSON.parse(txt); } catch { return { raw: txt }; }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4000);
+  try {
+    const resp = await fetch(url, {
+      method: "GET",
+      headers: { "x-oxydriver-key": utility.accessKey },
+      signal: controller.signal
+    });
+    const txt = await resp.text();
+    try { return JSON.parse(txt); } catch { return { raw: txt }; }
+  } catch (err) {
+    console.warn("[espace-client] provision identity fetch failed", {
+      clientCode,
+      tunnelUrl: utility.tunnelUrl,
+      error: err instanceof Error ? err.message : String(err)
+    });
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export const requireClientAuth = (req: Request, res: Response, next: NextFunction) => {

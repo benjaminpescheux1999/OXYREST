@@ -43,9 +43,10 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended"): Featur
   ];
   const extendedColumns: FeatureColumnRight[] = [
     ...minimalColumns,
-    { name: "TELDO", rights: ["read"] },
-    { name: "TELPO", rights: ["read"] },
-    { name: "TELTR", rights: ["read"] },
+    { name: "TELDO", rights: ["read", "write"] },
+    { name: "TELPO", rights: ["read", "write"] },
+    { name: "TELTR", rights: ["read", "write"] },
+    { name: "EMAIL", rights: ["read", "write"] },
     { name: "CONTR", rights: ["read"] },
     { name: "NUMRU", rights: ["read"] },
     { name: "QUARU", rights: ["read"] },
@@ -60,6 +61,7 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended"): Featur
     description: "Expose les donnees client pour espace web client final.",
     endpoints: [
       "GET /client/espace-client/client/:clientId",
+      "PUT /client/espace-client/client/:clientId",
       "GET /client/espace-client/client/:clientId/factures",
       "GET /client/espace-client/facture/:factureId"
     ],

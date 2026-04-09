@@ -18,6 +18,28 @@ export const baseV100Controller: ClientMethods = {
     const clientId = String(ctx.req.params.clientId || "").trim();
     await proxyToUtility(ctx, "/espace-client/client-summary", { clientId });
   },
+  async updateClient(ctx) {
+    const clientId = String(ctx.req.params.clientId || "").trim();
+    const url = `${ctx.utility.tunnelUrl}/espace-client/client-update`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "x-oxydriver-key": ctx.utility.accessKey,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        clientId,
+        email: ctx.req.body?.email,
+        telephoneDomicile: ctx.req.body?.telephoneDomicile,
+        telephonePortable: ctx.req.body?.telephonePortable,
+        telephoneTravail: ctx.req.body?.telephoneTravail
+      })
+    });
+    const text = await response.text();
+    let parsed: unknown = { raw: text };
+    try { parsed = JSON.parse(text); } catch { /* ignore non-json */ }
+    ctx.res.status(response.status).json({ proxiedToUtilityId: ctx.utility.id, data: parsed });
+  },
   async getClientFactures(ctx) {
     const clientId = String(ctx.req.params.clientId || "").trim();
     const requestedType = String(ctx.req.query.type || "").trim().toUpperCase();
