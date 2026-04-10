@@ -68,6 +68,30 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders
     { name: "MONTA", rights: ["read"] as Right[] },
     { name: "TTC", rights: ["read"] as Right[] }
   ];
+  const apparColumns: FeatureColumnRight[] = [
+    { name: "APPAR", rights: ["read"] as Right[] },
+    { name: "INSTA", rights: ["read"] as Right[] },
+    { name: "EMPLA", rights: ["read"] as Right[] },
+    { name: "OBSER", rights: ["read"] as Right[] },
+    { name: "MARQU", rights: ["read"] as Right[] },
+    { name: "MODEL", rights: ["read"] as Right[] },
+    { name: "GENRE", rights: ["read"] as Right[] },
+    { name: "SERIE", rights: ["read"] as Right[] },
+    { name: "PUISS", rights: ["read"] as Right[] },
+    { name: "ENERG", rights: ["read"] as Right[] },
+    { name: "DEGAR", rights: ["read"] as Right[] },
+    { name: "FIGAR", rights: ["read"] as Right[] },
+    { name: "GARA", rights: ["read"] as Right[] },
+    { name: "CONTR", rights: ["read"] as Right[] },
+    { name: "DAMES", rights: ["read"] as Right[] },
+    { name: "INTAL", rights: ["read"] as Right[] },
+    { name: "DUREE", rights: ["read"] as Right[] },
+    { name: "VENDE", rights: ["read"] as Right[] },
+    { name: "PRINC", rights: ["read"] as Right[] },
+    { name: "TARIF", rights: ["read"] as Right[] },
+    { name: "PRICO", rights: ["read"] as Right[] },
+    { name: "PARCO", rights: ["read"] as Right[] }
+  ];
   const normalizedFolders = normalizeFolders(folders);
   const minimalColumns: FeatureColumnRight[] = [
     { name: "CLIEN", rights: ["read"] },
@@ -103,6 +127,11 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders
       database: `SA_${folder}`,
       table: "CORFA",
       columns: corfaColumns
+    },
+    {
+      database: `SA_${folder}`,
+      table: "APPAR",
+      columns: apparColumns
     }
   ]);
 
@@ -115,7 +144,8 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders
       "GET /client/espace-client/client/:clientId",
       "PUT /client/espace-client/client/:clientId",
       "GET /client/espace-client/client/:clientId/factures",
-      "GET /client/espace-client/facture/:factureId"
+      "GET /client/espace-client/facture/:factureId",
+      "GET /client/espace-client/client/:clientId/appareils"
     ],
     resources
   };

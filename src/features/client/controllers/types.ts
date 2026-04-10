@@ -11,4 +11,5 @@ export interface ClientMethods {
   updateClient: (ctx: ClientRouteContext) => Promise<void>;
   getClientFactures: (ctx: ClientRouteContext) => Promise<void>;
   getFacture: (ctx: ClientRouteContext) => Promise<void>;
+  getClientAppareils: (ctx: ClientRouteContext) => Promise<void>;
 }

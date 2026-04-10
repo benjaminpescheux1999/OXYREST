@@ -67,3 +67,13 @@ clientRouter.get("/espace-client/facture/:factureId", resolveClientUtility, asyn
   }
 });
 
+clientRouter.get("/espace-client/client/:clientId/appareils", resolveClientUtility, async (req: ClientUtilityRequest, res) => {
+  const utility = req.clientUtility!;
+  const controller = resolveClientController(utility.apiVersion);
+  try {
+    await controller.getClientAppareils({ req, res, utility });
+  } catch (err) {
+    res.status(502).json({ error: "proxy_failed", message: err instanceof Error ? err.message : "unknown_error" });
+  }
+});
+
