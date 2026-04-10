@@ -108,6 +108,7 @@ export const config = {
   smtpUser: process.env.SMTP_USER || "",
   smtpPass: process.env.SMTP_PASS || "",
   alertEmailTo: process.env.ALERT_EMAIL_TO || "benjamin@info-tec.fr",
-  alertEmailFrom: process.env.ALERT_EMAIL_FROM || "oxyrest@localhost"
+  alertEmailFrom: process.env.ALERT_EMAIL_FROM || "oxyrest@localhost",
+  espaceClientPublicUrl: process.env.ESPACE_CLIENT_PUBLIC_URL || "https://oxy-portailclient.onrender.com/"
 };
 

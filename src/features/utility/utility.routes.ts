@@ -14,6 +14,11 @@ function normalizeSelectedFolders(raw: unknown): string[] {
     .filter((x, i, arr) => arr.findIndex((v) => v.toUpperCase() === x) === i);
 }
 
+function normalizeExposureProvider(raw: unknown): string {
+  const provider = String(raw || "").trim().toLowerCase();
+  return provider || "cloudflare";
+}
+
 const negotiateSchema = z.object({
   utilityVersion: z.string().min(1),
   accessKey: z.string().min(1)
@@ -59,6 +64,7 @@ utilityRouter.post("/sync", async (req, res) => {
     utilityVersion,
     apiVersion: contract.apiVersion || "v1",
     tunnelUrl: body.tunnelUrl ? String(body.tunnelUrl) : null,
+    exposureProvider: normalizeExposureProvider(body.exposureProvider),
     capabilities: typeof body.capabilities === "object" && body.capabilities ? body.capabilities : {},
     selectedFeatures: Array.isArray(body.selectedFeatures) ? body.selectedFeatures.map(String) : [],
     selectedFolders
@@ -69,6 +75,7 @@ utilityRouter.post("/sync", async (req, res) => {
     ok: true,
     utilityId: utility.id,
     apiVersion: utility.apiVersion,
+    exposureProvider: utility.exposureProvider,
     token: utility.accessKey,
     capabilities: utility.capabilities,
     featureCatalog: contract.featureCatalog,

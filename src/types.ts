@@ -17,6 +17,7 @@ export interface FeatureDefinition {
   name: string;
   code: string;
   description: string;
+  siteUrl?: string;
   endpoints: string[];
   resources: FeatureResource[];
 }

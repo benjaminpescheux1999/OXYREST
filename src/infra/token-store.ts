@@ -71,6 +71,7 @@ export async function ensureUtilityClientStore(): Promise<void> {
       utility_version TEXT NOT NULL,
       api_version TEXT NOT NULL,
       tunnel_url TEXT NULL,
+      exposure_provider TEXT NOT NULL DEFAULT 'cloudflare',
       capabilities_json TEXT NOT NULL,
       selected_features_json TEXT NOT NULL,
       selected_folders_json TEXT NOT NULL DEFAULT '[]',
@@ -89,6 +90,9 @@ export async function ensureUtilityClientStore(): Promise<void> {
   `);
   if (!hasColumn("utilities", "selected_folders_json")) {
     d.exec(`ALTER TABLE utilities ADD COLUMN selected_folders_json TEXT NOT NULL DEFAULT '[]';`);
+  }
+  if (!hasColumn("utilities", "exposure_provider")) {
+    d.exec(`ALTER TABLE utilities ADD COLUMN exposure_provider TEXT NOT NULL DEFAULT 'cloudflare';`);
   }
 }
 
@@ -210,6 +214,7 @@ export async function pgUpsertUtility(input: {
   utilityVersion: string;
   apiVersion: string;
   tunnelUrl: string | null;
+  exposureProvider: string;
   capabilities: Record<string, unknown>;
   selectedFeatures: string[];
   selectedFolders: string[];
@@ -220,9 +225,11 @@ export async function pgUpsertUtility(input: {
   d.prepare(
     `INSERT INTO utilities (
        id, access_key, token_id, utility_version, api_version, tunnel_url,
+       exposure_provider,
        capabilities_json, selected_features_json, selected_folders_json, last_seen_at, created_at
      ) VALUES (
        @id, @accessKey, @tokenId, @utilityVersion, @apiVersion, @tunnelUrl,
+       @exposureProvider,
        @capabilitiesJson, @selectedFeaturesJson, @selectedFoldersJson, @nowIso, @nowIso
      )
      ON CONFLICT(token_id) DO UPDATE SET
@@ -230,6 +237,7 @@ export async function pgUpsertUtility(input: {
        utility_version = excluded.utility_version,
        api_version = excluded.api_version,
        tunnel_url = excluded.tunnel_url,
+       exposure_provider = excluded.exposure_provider,
        capabilities_json = excluded.capabilities_json,
        selected_features_json = excluded.selected_features_json,
        selected_folders_json = excluded.selected_folders_json,
@@ -241,6 +249,7 @@ export async function pgUpsertUtility(input: {
     utilityVersion: input.utilityVersion,
     apiVersion: input.apiVersion,
     tunnelUrl: input.tunnelUrl ?? null,
+    exposureProvider: input.exposureProvider || "cloudflare",
     capabilitiesJson: JSON.stringify(input.capabilities ?? {}),
     selectedFeaturesJson: JSON.stringify(input.selectedFeatures ?? []),
     selectedFoldersJson: JSON.stringify(input.selectedFolders ?? []),
@@ -252,7 +261,7 @@ export async function pgGetUtilityByTokenId(tokenId: string) {
   await ensureUtilityClientStore();
   const d = getDb();
   return d.prepare(
-    `SELECT id, access_key, token_id, utility_version, api_version, tunnel_url,
+    `SELECT id, access_key, token_id, utility_version, api_version, tunnel_url, exposure_provider,
             capabilities_json, selected_features_json, selected_folders_json, last_seen_at, created_at
      FROM utilities WHERE token_id = ? LIMIT 1`
   ).get(tokenId) as any;
@@ -262,7 +271,7 @@ export async function pgGetUtilityById(utilityId: string) {
   await ensureUtilityClientStore();
   const d = getDb();
   return d.prepare(
-    `SELECT id, access_key, token_id, utility_version, api_version, tunnel_url,
+    `SELECT id, access_key, token_id, utility_version, api_version, tunnel_url, exposure_provider,
             capabilities_json, selected_features_json, selected_folders_json, last_seen_at, created_at
      FROM utilities WHERE id = ? LIMIT 1`
   ).get(utilityId) as any;
@@ -336,7 +345,7 @@ export async function pgResolveUtilityFromClientToken(clientToken: string) {
   await ensureUtilityClientStore();
   const d = getDb();
   return d.prepare(
-    `SELECT u.id, u.access_key, u.token_id, u.utility_version, u.api_version, u.tunnel_url,
+    `SELECT u.id, u.access_key, u.token_id, u.utility_version, u.api_version, u.tunnel_url, u.exposure_provider,
             u.capabilities_json, u.selected_features_json, u.selected_folders_json, u.last_seen_at, u.created_at
      FROM clients c
      JOIN utilities u ON u.id = c.utility_id

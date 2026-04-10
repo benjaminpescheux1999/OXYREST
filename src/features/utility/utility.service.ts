@@ -16,6 +16,7 @@ function mapUtilityRow(row: any) {
     utilityVersion: String(row.utility_version),
     apiVersion: String(row.api_version),
     tunnelUrl: row.tunnel_url ? String(row.tunnel_url) : null,
+    exposureProvider: row.exposure_provider ? String(row.exposure_provider) : "cloudflare",
     capabilities: (() => {
       try { return JSON.parse(String(row.capabilities_json ?? "{}")); } catch { return {}; }
     })() as Record<string, unknown>,
@@ -36,6 +37,7 @@ export async function upsertUtility(input: {
   utilityVersion: string;
   apiVersion: string;
   tunnelUrl: string | null;
+  exposureProvider: string;
   capabilities: Record<string, unknown>;
   selectedFeatures: string[];
   selectedFolders: string[];
@@ -49,6 +51,7 @@ export async function upsertUtility(input: {
     utilityVersion: input.utilityVersion,
     apiVersion: input.apiVersion,
     tunnelUrl: input.tunnelUrl,
+    exposureProvider: input.exposureProvider,
     capabilities: input.capabilities,
     selectedFeatures: input.selectedFeatures,
     selectedFolders: input.selectedFolders,

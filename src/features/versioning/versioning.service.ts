@@ -110,6 +110,7 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders
     name: "Espace client",
     code: "espace_client",
     description: "Expose les donnees client pour espace web client final.",
+    siteUrl: config.espaceClientPublicUrl,
     endpoints: [
       "GET /client/espace-client/client/:clientId",
       "PUT /client/espace-client/client/:clientId",
