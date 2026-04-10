@@ -136,7 +136,8 @@ function buildEspaceClientFeature(
     { name: "REMISE", rights: ["read"] as Right[] },
     { name: "DATEREMISE", rights: ["read"] as Right[] },
     { name: "INCIDENT", rights: ["read"] as Right[] },
-    { name: "DATINCIDENT", rights: ["read"] as Right[] }
+    { name: "DATINCIDENT", rights: ["read"] as Right[] },
+    { name: "OPERA", rights: ["read"] as Right[] }
   ];
   const normalizedFolders = normalizeFolders(folders);
   const minimalColumns: FeatureColumnRight[] = [
