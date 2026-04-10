@@ -22,6 +22,9 @@ function mapUtilityRow(row: any) {
     selectedFeatures: (() => {
       try { return JSON.parse(String(row.selected_features_json ?? "[]")); } catch { return []; }
     })() as string[],
+    selectedFolders: (() => {
+      try { return JSON.parse(String(row.selected_folders_json ?? "[]")); } catch { return []; }
+    })() as string[],
     lastSeenAt: String(row.last_seen_at),
     createdAt: String(row.created_at)
   };
@@ -35,6 +38,7 @@ export async function upsertUtility(input: {
   tunnelUrl: string | null;
   capabilities: Record<string, unknown>;
   selectedFeatures: string[];
+  selectedFolders: string[];
 }) {
   const now = new Date().toISOString();
   const id = randomUUID();
@@ -47,6 +51,7 @@ export async function upsertUtility(input: {
     tunnelUrl: input.tunnelUrl,
     capabilities: input.capabilities,
     selectedFeatures: input.selectedFeatures,
+    selectedFolders: input.selectedFolders,
     nowIso: now
   });
   const row = await pgGetUtilityByTokenId(input.tokenId);

@@ -1,5 +1,5 @@
 import { config } from "../../config";
-import type { FeatureColumnRight, FeatureDefinition, UtilityContract } from "../../types";
+import type { FeatureColumnRight, FeatureDefinition, Right, UtilityContract } from "../../types";
 import { compareSemver } from "../../utils/semver";
 
 type FeatureSetId = "espace_client_v100" | "espace_client_v101_plus";
@@ -35,7 +35,40 @@ const versionPolicies: UtilityVersionPolicy[] = [
   }
 ];
 
-function buildEspaceClientFeature(columnProfile: "minimal" | "extended"): FeatureDefinition {
+function normalizeFolders(raw: string[]): string[] {
+  return (raw || [])
+    .map((x) => String(x || "").trim().toUpperCase())
+    .filter((x) => !!x)
+    .filter((x, i, arr) => arr.findIndex((v) => v.toUpperCase() === x) === i);
+}
+
+function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders: string[]): FeatureDefinition {
+  const factureColumns: FeatureColumnRight[] = [
+    { name: "CLE", rights: ["read"] as Right[] },
+    { name: "TYPE", rights: ["read"] as Right[] },
+    { name: "CLIEN", rights: ["read"] as Right[] },
+    { name: "NOM", rights: ["read"] as Right[] },
+    { name: "ADRES_1_", rights: ["read"] as Right[] },
+    { name: "ADRES_2_", rights: ["read"] as Right[] },
+    { name: "ADRES_3_", rights: ["read"] as Right[] },
+    { name: "TOHT", rights: ["read"] as Right[] },
+    { name: "TOTVA", rights: ["read"] as Right[] },
+    { name: "TOTTC", rights: ["read"] as Right[] }
+  ];
+  const corfaColumns: FeatureColumnRight[] = [
+    { name: "CLE", rights: ["read"] as Right[] },
+    { name: "DESIG", rights: ["read"] as Right[] },
+    { name: "QUANT", rights: ["read"] as Right[] },
+    { name: "PRIBR", rights: ["read"] as Right[] },
+    { name: "REMIS", rights: ["read"] as Right[] },
+    { name: "PRINE", rights: ["read"] as Right[] },
+    { name: "PAYEU", rights: ["read"] as Right[] },
+    { name: "DATEF", rights: ["read"] as Right[] },
+    { name: "TATVA", rights: ["read"] as Right[] },
+    { name: "MONTA", rights: ["read"] as Right[] },
+    { name: "TTC", rights: ["read"] as Right[] }
+  ];
+  const normalizedFolders = normalizeFolders(folders);
   const minimalColumns: FeatureColumnRight[] = [
     { name: "CLIEN", rights: ["read"] },
     { name: "NOM", rights: ["read"] },
@@ -55,6 +88,24 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended"): Featur
     { name: "CODPO", rights: ["read"] },
     { name: "RENOU", rights: ["read"] }
   ];
+  const resources = normalizedFolders.flatMap((folder) => [
+    {
+      database: `SA_${folder}`,
+      table: "CLIEN",
+      columns: columnProfile === "extended" ? extendedColumns : minimalColumns
+    },
+    {
+      database: `SA_${folder}`,
+      table: "FACTU",
+      columns: factureColumns
+    },
+    {
+      database: `SA_${folder}`,
+      table: "CORFA",
+      columns: corfaColumns
+    }
+  ]);
+
   return {
     name: "Espace client",
     code: "espace_client",
@@ -65,55 +116,16 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended"): Featur
       "GET /client/espace-client/client/:clientId/factures",
       "GET /client/espace-client/facture/:factureId"
     ],
-    resources: [
-      {
-        database: "SA_GAZSRV",
-        table: "CLIEN",
-        columns: columnProfile === "extended" ? extendedColumns : minimalColumns
-      },
-      {
-        database: "SA_GAZSRV",
-        table: "FACTU",
-        columns: [
-          { name: "CLE", rights: ["read"] },
-          { name: "TYPE", rights: ["read"] },
-          { name: "CLIEN", rights: ["read"] },
-          { name: "NOM", rights: ["read"] },
-          { name: "ADRES_1_", rights: ["read"] },
-          { name: "ADRES_2_", rights: ["read"] },
-          { name: "ADRES_3_", rights: ["read"] },
-          { name: "TOHT", rights: ["read"] },
-          { name: "TOTVA", rights: ["read"] },
-          { name: "TOTTC", rights: ["read"] }
-        ]
-      },
-      {
-        database: "SA_GAZSRV",
-        table: "CORFA",
-        columns: [
-          { name: "CLE", rights: ["read"] },
-          { name: "DESIG", rights: ["read"] },
-          { name: "QUANT", rights: ["read"] },
-          { name: "PRIBR", rights: ["read"] },
-          { name: "REMIS", rights: ["read"] },
-          { name: "PRINE", rights: ["read"] },
-          { name: "PAYEU", rights: ["read"] },
-          { name: "DATEF", rights: ["read"] },
-          { name: "TATVA", rights: ["read"] },
-          { name: "MONTA", rights: ["read"] },
-          { name: "TTC", rights: ["read"] }
-        ]
-      }
-    ]
+    resources
   };
 }
 
-function buildFeatureCatalog(featureSet: FeatureSetId): FeatureDefinition[] {
+function buildFeatureCatalog(featureSet: FeatureSetId, folders: string[]): FeatureDefinition[] {
   switch (featureSet) {
     case "espace_client_v100":
-      return [buildEspaceClientFeature("minimal")];
+      return [buildEspaceClientFeature("minimal", folders)];
     case "espace_client_v101_plus":
-      return [buildEspaceClientFeature("extended")];
+      return [buildEspaceClientFeature("extended", folders)];
     default:
       return [];
   }
@@ -128,7 +140,7 @@ function resolvePolicy(utilityVersion: string): UtilityVersionPolicy | null {
   return null;
 }
 
-export function resolveUtilityContract(utilityVersion: string): UtilityContract {
+export function resolveUtilityContract(utilityVersion: string, selectedFolders: string[] = []): UtilityContract {
   const supported = compareSemver(utilityVersion, config.minSupportedUtilityVersion) >= 0;
   if (!supported) {
     return {
@@ -153,7 +165,7 @@ export function resolveUtilityContract(utilityVersion: string): UtilityContract 
     isSupported: true,
     apiVersion: policy.apiVersion,
     message: policy.message,
-    featureCatalog: buildFeatureCatalog(policy.featureSet)
+      featureCatalog: buildFeatureCatalog(policy.featureSet, selectedFolders)
   };
 }
 

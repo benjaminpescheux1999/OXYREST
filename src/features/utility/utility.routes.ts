@@ -6,6 +6,14 @@ import { getUtilityByTokenId, upsertUtility } from "./utility.service";
 
 export const utilityRouter = Router();
 
+function normalizeSelectedFolders(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((x) => String(x || "").trim().toUpperCase())
+    .filter((x) => !!x)
+    .filter((x, i, arr) => arr.findIndex((v) => v.toUpperCase() === x) === i);
+}
+
 const negotiateSchema = z.object({
   utilityVersion: z.string().min(1),
   accessKey: z.string().min(1)
@@ -17,7 +25,7 @@ utilityRouter.post("/negotiate", (req, res) => {
     res.status(400).json({ error: "invalid_payload", details: parsed.error.flatten() });
     return;
   }
-  const contract = resolveUtilityContract(parsed.data.utilityVersion);
+  const contract = resolveUtilityContract(parsed.data.utilityVersion, normalizeSelectedFolders(req.body?.selectedFolders));
   if (!contract.isSupported) {
     res.status(426).json({ supported: false, message: contract.message, requiredAction: "update_utility" });
     return;
@@ -38,10 +46,11 @@ utilityRouter.post("/sync", async (req, res) => {
   if (!utilityVersion) return res.status(400).json({ error: "invalid_utility_version" });
   if (!accessKey) return res.status(400).json({ error: "invalid_access_key" });
 
+  const selectedFolders = normalizeSelectedFolders(body.selectedFolders);
   const tokenRecord = await findTokenRecord(accessKey);
   if (!tokenRecord || tokenRecord.revokedAt) return res.status(401).json({ error: "invalid_or_revoked_access_key" });
 
-  const contract = resolveUtilityContract(utilityVersion);
+  const contract = resolveUtilityContract(utilityVersion, selectedFolders);
   if (!contract.isSupported) return res.status(426).json({ error: "unsupported_utility_version", message: contract.message });
 
   const utility = await upsertUtility({
@@ -51,7 +60,8 @@ utilityRouter.post("/sync", async (req, res) => {
     apiVersion: contract.apiVersion || "v1",
     tunnelUrl: body.tunnelUrl ? String(body.tunnelUrl) : null,
     capabilities: typeof body.capabilities === "object" && body.capabilities ? body.capabilities : {},
-    selectedFeatures: Array.isArray(body.selectedFeatures) ? body.selectedFeatures.map(String) : []
+    selectedFeatures: Array.isArray(body.selectedFeatures) ? body.selectedFeatures.map(String) : [],
+    selectedFolders
   });
   await touchToken(tokenRecord.id);
   if (!utility) return res.status(500).json({ error: "utility_upsert_failed" });
@@ -62,7 +72,8 @@ utilityRouter.post("/sync", async (req, res) => {
     token: utility.accessKey,
     capabilities: utility.capabilities,
     featureCatalog: contract.featureCatalog,
-    selectedFeatures: utility.selectedFeatures || []
+    selectedFeatures: utility.selectedFeatures || [],
+    selectedFolders: utility.selectedFolders || []
   });
 });
 

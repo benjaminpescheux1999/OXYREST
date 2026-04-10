@@ -27,6 +27,12 @@ function getDb(): Database.Database {
   return db;
 }
 
+function hasColumn(table: string, column: string): boolean {
+  const d = getDb();
+  const rows = d.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  return rows.some((r) => String(r.name || "").toLowerCase() === column.toLowerCase());
+}
+
 function jsonParseArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String);
   if (typeof value !== "string" || !value.trim()) return [];
@@ -67,6 +73,7 @@ export async function ensureUtilityClientStore(): Promise<void> {
       tunnel_url TEXT NULL,
       capabilities_json TEXT NOT NULL,
       selected_features_json TEXT NOT NULL,
+      selected_folders_json TEXT NOT NULL DEFAULT '[]',
       last_seen_at TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
@@ -80,6 +87,9 @@ export async function ensureUtilityClientStore(): Promise<void> {
       FOREIGN KEY (utility_id) REFERENCES utilities(id) ON DELETE CASCADE
     );
   `);
+  if (!hasColumn("utilities", "selected_folders_json")) {
+    d.exec(`ALTER TABLE utilities ADD COLUMN selected_folders_json TEXT NOT NULL DEFAULT '[]';`);
+  }
 }
 
 export async function ensureEspaceClientAuthStore(): Promise<void> {
@@ -202,6 +212,7 @@ export async function pgUpsertUtility(input: {
   tunnelUrl: string | null;
   capabilities: Record<string, unknown>;
   selectedFeatures: string[];
+  selectedFolders: string[];
   nowIso: string;
 }): Promise<void> {
   await ensureUtilityClientStore();
@@ -209,10 +220,10 @@ export async function pgUpsertUtility(input: {
   d.prepare(
     `INSERT INTO utilities (
        id, access_key, token_id, utility_version, api_version, tunnel_url,
-       capabilities_json, selected_features_json, last_seen_at, created_at
+       capabilities_json, selected_features_json, selected_folders_json, last_seen_at, created_at
      ) VALUES (
        @id, @accessKey, @tokenId, @utilityVersion, @apiVersion, @tunnelUrl,
-       @capabilitiesJson, @selectedFeaturesJson, @nowIso, @nowIso
+       @capabilitiesJson, @selectedFeaturesJson, @selectedFoldersJson, @nowIso, @nowIso
      )
      ON CONFLICT(token_id) DO UPDATE SET
        access_key = excluded.access_key,
@@ -221,6 +232,7 @@ export async function pgUpsertUtility(input: {
        tunnel_url = excluded.tunnel_url,
        capabilities_json = excluded.capabilities_json,
        selected_features_json = excluded.selected_features_json,
+       selected_folders_json = excluded.selected_folders_json,
        last_seen_at = excluded.last_seen_at`
   ).run({
     id: input.id,
@@ -231,6 +243,7 @@ export async function pgUpsertUtility(input: {
     tunnelUrl: input.tunnelUrl ?? null,
     capabilitiesJson: JSON.stringify(input.capabilities ?? {}),
     selectedFeaturesJson: JSON.stringify(input.selectedFeatures ?? []),
+    selectedFoldersJson: JSON.stringify(input.selectedFolders ?? []),
     nowIso: input.nowIso
   });
 }
@@ -240,7 +253,7 @@ export async function pgGetUtilityByTokenId(tokenId: string) {
   const d = getDb();
   return d.prepare(
     `SELECT id, access_key, token_id, utility_version, api_version, tunnel_url,
-            capabilities_json, selected_features_json, last_seen_at, created_at
+            capabilities_json, selected_features_json, selected_folders_json, last_seen_at, created_at
      FROM utilities WHERE token_id = ? LIMIT 1`
   ).get(tokenId) as any;
 }
@@ -250,7 +263,7 @@ export async function pgGetUtilityById(utilityId: string) {
   const d = getDb();
   return d.prepare(
     `SELECT id, access_key, token_id, utility_version, api_version, tunnel_url,
-            capabilities_json, selected_features_json, last_seen_at, created_at
+            capabilities_json, selected_features_json, selected_folders_json, last_seen_at, created_at
      FROM utilities WHERE id = ? LIMIT 1`
   ).get(utilityId) as any;
 }
@@ -324,7 +337,7 @@ export async function pgResolveUtilityFromClientToken(clientToken: string) {
   const d = getDb();
   return d.prepare(
     `SELECT u.id, u.access_key, u.token_id, u.utility_version, u.api_version, u.tunnel_url,
-            u.capabilities_json, u.selected_features_json, u.last_seen_at, u.created_at
+            u.capabilities_json, u.selected_features_json, u.selected_folders_json, u.last_seen_at, u.created_at
      FROM clients c
      JOIN utilities u ON u.id = c.utility_id
      WHERE c.client_token = ?
