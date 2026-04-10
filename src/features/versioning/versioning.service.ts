@@ -2,7 +2,7 @@ import { config } from "../../config";
 import type { FeatureColumnRight, FeatureDefinition, Right, UtilityContract } from "../../types";
 import { compareSemver } from "../../utils/semver";
 
-type FeatureSetId = "espace_client_v100" | "espace_client_v101_plus" | "espace_client_v117_plus" | "espace_client_v118_plus" | "espace_client_v119_plus";
+type FeatureSetId = "espace_client_v100" | "espace_client_v101_plus" | "espace_client_v117_plus" | "espace_client_v118_plus" | "espace_client_v119_plus" | "espace_client_v125_plus";
 
 interface UtilityVersionPolicy {
   minVersion: string;
@@ -50,9 +50,16 @@ const versionPolicies: UtilityVersionPolicy[] = [
   },
   {
     minVersion: "0.1.0.19",
+    maxVersionExclusive: "0.1.0.25",
     apiVersion: "1.0.0.1",
     message: "OK",
     featureSet: "espace_client_v119_plus"
+  },
+  {
+    minVersion: "0.1.0.25",
+    apiVersion: "1.0.0.1",
+    message: "OK",
+    featureSet: "espace_client_v125_plus"
   }
 ];
 
@@ -68,7 +75,8 @@ function buildEspaceClientFeature(
   folders: string[],
   includeAppar: boolean,
   includeApparQuant: boolean,
-  includeReglements: boolean
+  includeReglements: boolean,
+  includeReglementOpera: boolean
 ): FeatureDefinition {
   const factureColumns: FeatureColumnRight[] = [
     { name: "CLE", rights: ["read"] as Right[] },
@@ -136,9 +144,11 @@ function buildEspaceClientFeature(
     { name: "REMISE", rights: ["read"] as Right[] },
     { name: "DATEREMISE", rights: ["read"] as Right[] },
     { name: "INCIDENT", rights: ["read"] as Right[] },
-    { name: "DATINCIDENT", rights: ["read"] as Right[] },
-    { name: "OPERA", rights: ["read"] as Right[] }
+    { name: "DATINCIDENT", rights: ["read"] as Right[] }
   ];
+  if (includeReglementOpera) {
+    hreglColumns.push({ name: "OPERA", rights: ["read"] as Right[] });
+  }
   const normalizedFolders = normalizeFolders(folders);
   const minimalColumns: FeatureColumnRight[] = [
     { name: "CLIEN", rights: ["read"] },
@@ -207,15 +217,17 @@ function buildEspaceClientFeature(
 function buildFeatureCatalog(featureSet: FeatureSetId, folders: string[]): FeatureDefinition[] {
   switch (featureSet) {
     case "espace_client_v100":
-      return [buildEspaceClientFeature("minimal", folders, false, false, false)];
+      return [buildEspaceClientFeature("minimal", folders, false, false, false, false)];
     case "espace_client_v101_plus":
-      return [buildEspaceClientFeature("extended", folders, false, false, false)];
+      return [buildEspaceClientFeature("extended", folders, false, false, false, false)];
     case "espace_client_v117_plus":
-      return [buildEspaceClientFeature("extended", folders, true, false, false)];
+      return [buildEspaceClientFeature("extended", folders, true, false, false, false)];
     case "espace_client_v118_plus":
-      return [buildEspaceClientFeature("extended", folders, true, true, false)];
+      return [buildEspaceClientFeature("extended", folders, true, true, false, false)];
     case "espace_client_v119_plus":
-      return [buildEspaceClientFeature("extended", folders, true, true, true)];
+      return [buildEspaceClientFeature("extended", folders, true, true, true, false)];
+    case "espace_client_v125_plus":
+      return [buildEspaceClientFeature("extended", folders, true, true, true, true)];
     default:
       return [];
   }
