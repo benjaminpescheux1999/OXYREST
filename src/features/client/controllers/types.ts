@@ -12,4 +12,5 @@ export interface ClientMethods {
   getClientFactures: (ctx: ClientRouteContext) => Promise<void>;
   getFacture: (ctx: ClientRouteContext) => Promise<void>;
   getClientAppareils: (ctx: ClientRouteContext) => Promise<void>;
+  getClientReglements: (ctx: ClientRouteContext) => Promise<void>;
 }

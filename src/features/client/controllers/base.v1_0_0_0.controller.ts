@@ -53,5 +53,9 @@ export const baseV100Controller: ClientMethods = {
   async getClientAppareils(ctx) {
     const clientId = String(ctx.req.params.clientId || "").trim();
     await proxyToUtility(ctx, "/espace-client/appareils", { clientId });
+  },
+  async getClientReglements(ctx) {
+    const clientId = String(ctx.req.params.clientId || "").trim();
+    await proxyToUtility(ctx, "/espace-client/reglements", { clientId });
   }
 };
