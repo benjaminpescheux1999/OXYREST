@@ -2,7 +2,7 @@ import { config } from "../../config";
 import type { FeatureColumnRight, FeatureDefinition, Right, UtilityContract } from "../../types";
 import { compareSemver } from "../../utils/semver";
 
-type FeatureSetId = "espace_client_v100" | "espace_client_v101_plus";
+type FeatureSetId = "espace_client_v100" | "espace_client_v101_plus" | "espace_client_v117_plus";
 
 interface UtilityVersionPolicy {
   minVersion: string;
@@ -29,9 +29,16 @@ const versionPolicies: UtilityVersionPolicy[] = [
   },
   {
     minVersion: "0.1.0.2",
+    maxVersionExclusive: "0.1.0.17",
     apiVersion: "1.0.0.1",
     message: "OK",
     featureSet: "espace_client_v101_plus"
+  },
+  {
+    minVersion: "0.1.0.17",
+    apiVersion: "1.0.0.1",
+    message: "OK",
+    featureSet: "espace_client_v117_plus"
   }
 ];
 
@@ -42,7 +49,7 @@ function normalizeFolders(raw: string[]): string[] {
     .filter((x, i, arr) => arr.findIndex((v) => v.toUpperCase() === x) === i);
 }
 
-function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders: string[]): FeatureDefinition {
+function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders: string[], includeAppar: boolean): FeatureDefinition {
   const factureColumns: FeatureColumnRight[] = [
     { name: "CLE", rights: ["read"] as Right[] },
     { name: "TYPE", rights: ["read"] as Right[] },
@@ -128,11 +135,11 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders
       table: "CORFA",
       columns: corfaColumns
     },
-    {
+    ...(includeAppar ? [{
       database: `SA_${folder}`,
       table: "APPAR",
       columns: apparColumns
-    }
+    }] : [])
   ]);
 
   return {
@@ -145,7 +152,7 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders
       "PUT /client/espace-client/client/:clientId",
       "GET /client/espace-client/client/:clientId/factures",
       "GET /client/espace-client/facture/:factureId",
-      "GET /client/espace-client/client/:clientId/appareils"
+      ...(includeAppar ? ["GET /client/espace-client/client/:clientId/appareils"] : [])
     ],
     resources
   };
@@ -154,9 +161,11 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders
 function buildFeatureCatalog(featureSet: FeatureSetId, folders: string[]): FeatureDefinition[] {
   switch (featureSet) {
     case "espace_client_v100":
-      return [buildEspaceClientFeature("minimal", folders)];
+      return [buildEspaceClientFeature("minimal", folders, false)];
     case "espace_client_v101_plus":
-      return [buildEspaceClientFeature("extended", folders)];
+      return [buildEspaceClientFeature("extended", folders, false)];
+    case "espace_client_v117_plus":
+      return [buildEspaceClientFeature("extended", folders, true)];
     default:
       return [];
   }

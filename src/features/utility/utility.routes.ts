@@ -3,6 +3,7 @@ import { z } from "zod";
 import { resolveUtilityContract } from "../versioning/versioning.service";
 import { findTokenRecord, touchToken } from "../auth/token.service";
 import { getUtilityByTokenId, upsertUtility } from "./utility.service";
+import { buildUtilityUpdatePayload } from "../system/utility-update.service";
 
 export const utilityRouter = Router();
 
@@ -57,6 +58,7 @@ utilityRouter.post("/sync", async (req, res) => {
 
   const contract = resolveUtilityContract(utilityVersion, selectedFolders);
   if (!contract.isSupported) return res.status(426).json({ error: "unsupported_utility_version", message: contract.message });
+  const update = buildUtilityUpdatePayload(utilityVersion, accessKey);
 
   const utility = await upsertUtility({
     accessKey,
@@ -78,6 +80,13 @@ utilityRouter.post("/sync", async (req, res) => {
     exposureProvider: utility.exposureProvider,
     token: utility.accessKey,
     capabilities: utility.capabilities,
+    update: {
+      hasUpdate: update.hasUpdate,
+      latestVersion: update.latestVersion,
+      targetVersion: update.targetVersion,
+      downloadUrl: update.downloadUrl,
+      releaseNotesUrl: update.releaseNotesUrl
+    },
     featureCatalog: contract.featureCatalog,
     selectedFeatures: utility.selectedFeatures || [],
     selectedFolders: utility.selectedFolders || []
