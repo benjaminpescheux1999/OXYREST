@@ -85,7 +85,8 @@ utilityRouter.post("/sync", async (req, res) => {
       latestVersion: update.latestVersion,
       targetVersion: update.targetVersion,
       downloadUrl: update.downloadUrl,
-      releaseNotesUrl: update.releaseNotesUrl
+      releaseNotesUrl: update.releaseNotesUrl,
+      encryptedSftp: update.encryptedSftp
     },
     featureCatalog: contract.featureCatalog,
     selectedFeatures: utility.selectedFeatures || [],

@@ -2,7 +2,7 @@ import { config } from "../../config";
 import type { FeatureColumnRight, FeatureDefinition, Right, UtilityContract } from "../../types";
 import { compareSemver } from "../../utils/semver";
 
-type FeatureSetId = "espace_client_v100" | "espace_client_v101_plus" | "espace_client_v117_plus";
+type FeatureSetId = "espace_client_v100" | "espace_client_v101_plus" | "espace_client_v117_plus" | "espace_client_v118_plus";
 
 interface UtilityVersionPolicy {
   minVersion: string;
@@ -36,9 +36,16 @@ const versionPolicies: UtilityVersionPolicy[] = [
   },
   {
     minVersion: "0.1.0.17",
+    maxVersionExclusive: "0.1.0.18",
     apiVersion: "1.0.0.1",
     message: "OK",
     featureSet: "espace_client_v117_plus"
+  },
+  {
+    minVersion: "0.1.0.18",
+    apiVersion: "1.0.0.1",
+    message: "OK",
+    featureSet: "espace_client_v118_plus"
   }
 ];
 
@@ -49,7 +56,12 @@ function normalizeFolders(raw: string[]): string[] {
     .filter((x, i, arr) => arr.findIndex((v) => v.toUpperCase() === x) === i);
 }
 
-function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders: string[], includeAppar: boolean): FeatureDefinition {
+function buildEspaceClientFeature(
+  columnProfile: "minimal" | "extended",
+  folders: string[],
+  includeAppar: boolean,
+  includeApparQuant: boolean
+): FeatureDefinition {
   const factureColumns: FeatureColumnRight[] = [
     { name: "CLE", rights: ["read"] as Right[] },
     { name: "TYPE", rights: ["read"] as Right[] },
@@ -88,7 +100,7 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders
     { name: "ENERG", rights: ["read"] as Right[] },
     { name: "DEGAR", rights: ["read"] as Right[] },
     { name: "FIGAR", rights: ["read"] as Right[] },
-    { name: "GARA", rights: ["read"] as Right[] },
+    { name: "GARAN", rights: ["read"] as Right[] },
     { name: "CONTR", rights: ["read"] as Right[] },
     { name: "DAMES", rights: ["read"] as Right[] },
     { name: "INTAL", rights: ["read"] as Right[] },
@@ -97,8 +109,12 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders
     { name: "PRINC", rights: ["read"] as Right[] },
     { name: "TARIF", rights: ["read"] as Right[] },
     { name: "PRICO", rights: ["read"] as Right[] },
-    { name: "PARCO", rights: ["read"] as Right[] }
+    { name: "PARCO", rights: ["read"] as Right[] },
+    { name: "ORDR", rights: ["read"] as Right[] }
   ];
+  if (includeApparQuant) {
+    apparColumns.push({ name: "QUANT", rights: ["read"] as Right[] });
+  }
   const normalizedFolders = normalizeFolders(folders);
   const minimalColumns: FeatureColumnRight[] = [
     { name: "CLIEN", rights: ["read"] },
@@ -161,11 +177,13 @@ function buildEspaceClientFeature(columnProfile: "minimal" | "extended", folders
 function buildFeatureCatalog(featureSet: FeatureSetId, folders: string[]): FeatureDefinition[] {
   switch (featureSet) {
     case "espace_client_v100":
-      return [buildEspaceClientFeature("minimal", folders, false)];
+      return [buildEspaceClientFeature("minimal", folders, false, false)];
     case "espace_client_v101_plus":
-      return [buildEspaceClientFeature("extended", folders, false)];
+      return [buildEspaceClientFeature("extended", folders, false, false)];
     case "espace_client_v117_plus":
-      return [buildEspaceClientFeature("extended", folders, true)];
+      return [buildEspaceClientFeature("extended", folders, true, false)];
+    case "espace_client_v118_plus":
+      return [buildEspaceClientFeature("extended", folders, true, true)];
     default:
       return [];
   }
