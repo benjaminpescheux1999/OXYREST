@@ -50,6 +50,7 @@ export async function ensureTokenStore(): Promise<void> {
     CREATE TABLE IF NOT EXISTS api_tokens (
       id TEXT PRIMARY KEY,
       label TEXT NOT NULL,
+      folders_json TEXT NOT NULL DEFAULT '[]',
       token_prefix TEXT NOT NULL,
       token_hash TEXT NOT NULL UNIQUE,
       scopes_json TEXT NOT NULL,
@@ -59,6 +60,9 @@ export async function ensureTokenStore(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_api_tokens_hash ON api_tokens (token_hash);
   `);
+  if (!hasColumn("api_tokens", "folders_json")) {
+    d.exec(`ALTER TABLE api_tokens ADD COLUMN folders_json TEXT NOT NULL DEFAULT '[]';`);
+  }
 }
 
 export async function ensureUtilityClientStore(): Promise<void> {
@@ -131,6 +135,7 @@ export async function ensureEspaceClientAuthStore(): Promise<void> {
 export async function pgCreateToken(input: {
   id: string;
   label: string;
+  folders: string[];
   tokenPrefix: string;
   tokenHash: string;
   scopes: string[];
@@ -139,11 +144,12 @@ export async function pgCreateToken(input: {
   await ensureTokenStore();
   const d = getDb();
   d.prepare(
-    `INSERT INTO api_tokens (id, label, token_prefix, token_hash, scopes_json, revoked_at, created_at, last_used_at)
-     VALUES (@id, @label, @tokenPrefix, @tokenHash, @scopesJson, NULL, @createdAt, NULL)`
+    `INSERT INTO api_tokens (id, label, folders_json, token_prefix, token_hash, scopes_json, revoked_at, created_at, last_used_at)
+     VALUES (@id, @label, @foldersJson, @tokenPrefix, @tokenHash, @scopesJson, NULL, @createdAt, NULL)`
   ).run({
     id: input.id,
     label: input.label,
+    foldersJson: JSON.stringify(input.folders ?? []),
     tokenPrefix: input.tokenPrefix,
     tokenHash: input.tokenHash,
     scopesJson: JSON.stringify(input.scopes ?? []),
@@ -155,13 +161,14 @@ export async function pgFindByHash(tokenHash: string) {
   await ensureTokenStore();
   const d = getDb();
   const row = d.prepare(
-    `SELECT id, label, token_prefix, token_hash, scopes_json, revoked_at, created_at, last_used_at
+    `SELECT id, label, folders_json, token_prefix, token_hash, scopes_json, revoked_at, created_at, last_used_at
      FROM api_tokens WHERE token_hash = ? LIMIT 1`
   ).get(tokenHash) as any;
   if (!row) return null;
   return {
     id: row.id,
     label: row.label,
+    folders: jsonParseArray(row.folders_json),
     token_prefix: row.token_prefix,
     token_hash: row.token_hash,
     scopes: jsonParseArray(row.scopes_json),
@@ -181,12 +188,13 @@ export async function pgListTokens() {
   await ensureTokenStore();
   const d = getDb();
   const rows = d.prepare(
-    `SELECT id, label, token_prefix, scopes_json, revoked_at, created_at, last_used_at
+    `SELECT id, label, folders_json, token_prefix, scopes_json, revoked_at, created_at, last_used_at
      FROM api_tokens ORDER BY created_at DESC`
   ).all() as any[];
   return rows.map((r) => ({
     id: r.id,
     label: r.label,
+    folders: jsonParseArray(r.folders_json),
     token_prefix: r.token_prefix,
     scopes: jsonParseArray(r.scopes_json),
     revoked_at: r.revoked_at,

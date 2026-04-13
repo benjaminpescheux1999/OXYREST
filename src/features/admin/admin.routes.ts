@@ -7,9 +7,17 @@ export const adminRouter = Router();
 adminRouter.use(requireAdminApiKey);
 
 const createSchema = z.object({
-  label: z.string().min(1),
-  scopes: z.array(z.string()).optional()
+  folders: z.array(z.string().min(1)).min(1),
+  scopes: z.array(z.string()).optional(),
+  label: z.string().optional()
 });
+
+function normalizeFolders(raw: string[]): string[] {
+  return (raw || [])
+    .map((x) => String(x || "").trim().toUpperCase())
+    .filter((x) => !!x)
+    .filter((x, i, arr) => arr.findIndex((v) => v.toUpperCase() === x) === i);
+}
 
 adminRouter.post("/tokens", async (req, res) => {
   const parsed = createSchema.safeParse(req.body ?? {});
@@ -17,13 +25,16 @@ adminRouter.post("/tokens", async (req, res) => {
     res.status(400).json({ error: "invalid_payload", details: parsed.error.flatten() });
     return;
   }
-  const created = await createLabeledToken(parsed.data.label, parsed.data.scopes ?? ["sync", "proxy"]);
+  const folders = normalizeFolders(parsed.data.folders);
+  const label = (parsed.data.label || folders.join(", ")).trim();
+  const created = await createLabeledToken(label || "TOKEN_FOLDERS", parsed.data.scopes ?? ["sync", "proxy"], folders);
   res.status(201).json({
     ok: true,
     token: created.token,
     tokenMeta: {
       id: created.meta.id,
       label: created.meta.label,
+      folders: created.meta.folders,
       tokenPrefix: created.meta.tokenPrefix,
       scopes: created.meta.scopes,
       createdAt: created.meta.createdAt

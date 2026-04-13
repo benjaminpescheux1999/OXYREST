@@ -55,8 +55,10 @@ utilityRouter.post("/sync", async (req, res) => {
   const selectedFolders = normalizeSelectedFolders(body.selectedFolders);
   const tokenRecord = await findTokenRecord(accessKey);
   if (!tokenRecord || tokenRecord.revokedAt) return res.status(401).json({ error: "invalid_or_revoked_access_key" });
+  const tokenFolders = normalizeSelectedFolders((tokenRecord as any).folders);
+  const effectiveFolders = tokenFolders.length > 0 ? tokenFolders : selectedFolders;
 
-  const contract = resolveUtilityContract(utilityVersion, selectedFolders);
+  const contract = resolveUtilityContract(utilityVersion, effectiveFolders);
   if (!contract.isSupported) return res.status(426).json({ error: "unsupported_utility_version", message: contract.message });
   const update = buildUtilityUpdatePayload(utilityVersion, accessKey);
 
@@ -69,7 +71,7 @@ utilityRouter.post("/sync", async (req, res) => {
     exposureProvider: normalizeExposureProvider(body.exposureProvider),
     capabilities: typeof body.capabilities === "object" && body.capabilities ? body.capabilities : {},
     selectedFeatures: Array.isArray(body.selectedFeatures) ? body.selectedFeatures.map(String) : [],
-    selectedFolders
+    selectedFolders: effectiveFolders
   });
   await touchToken(tokenRecord.id);
   if (!utility) return res.status(500).json({ error: "utility_upsert_failed" });
@@ -90,7 +92,8 @@ utilityRouter.post("/sync", async (req, res) => {
     },
     featureCatalog: contract.featureCatalog,
     selectedFeatures: utility.selectedFeatures || [],
-    selectedFolders: utility.selectedFolders || []
+    selectedFolders: utility.selectedFolders || [],
+    tokenFolders
   });
 });
 

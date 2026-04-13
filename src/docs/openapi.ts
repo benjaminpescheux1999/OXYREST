@@ -57,9 +57,14 @@ export const openApiDocument = {
             "application/json": {
               schema: {
                 type: "object",
-                required: ["label"],
+                required: ["folders"],
                 properties: {
-                  label: { type: "string", example: "Client Brest" },
+                  label: { type: "string", example: "Client Brest (optionnel)" },
+                  folders: {
+                    type: "array",
+                    items: { type: "string" },
+                    example: ["GAZSRV", "GAZSRV2"]
+                  },
                   scopes: {
                     type: "array",
                     items: { type: "string" },

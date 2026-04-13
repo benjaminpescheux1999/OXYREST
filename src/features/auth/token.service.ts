@@ -26,13 +26,14 @@ export function generateToken(): { token: string; recordId: string } {
   return { token, recordId: id };
 }
 
-export async function createLabeledToken(label: string, scopes: string[]): Promise<{ token: string; meta: any }> {
+export async function createLabeledToken(label: string, scopes: string[], folders: string[] = []): Promise<{ token: string; meta: any }> {
   const token = `ox_live_${crypto.randomBytes(24).toString("base64url")}`;
   const now = new Date().toISOString();
   const id = randomUUID();
   const rec = {
     id,
     label,
+    folders,
     tokenPrefix: token.slice(0, 18),
     tokenHash: tokenHash(token),
     scopes,
@@ -53,6 +54,7 @@ export async function findTokenRecord(plainToken: string) {
   return {
     id: String(row.id),
     label: String(row.label),
+    folders: Array.isArray(row.folders) ? row.folders.map(String) : [],
     tokenPrefix: String(row.token_prefix),
     tokenHash: String(row.token_hash),
     scopes: Array.isArray(row.scopes) ? row.scopes.map(String) : [],
@@ -73,6 +75,7 @@ export async function listTokens() {
   return rows.map((t) => ({
     id: String(t.id),
     label: String(t.label),
+    folders: Array.isArray(t.folders) ? t.folders.map(String) : [],
     tokenPrefix: String(t.token_prefix),
     scopes: Array.isArray(t.scopes) ? t.scopes.map(String) : [],
     revokedAt: t.revoked_at ? new Date(t.revoked_at).toISOString() : null,
