@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { resolveUtilityContract } from "../versioning/versioning.service";
-import { findTokenRecord, takeTokenUiPassword, touchToken } from "../auth/token.service";
+import { findTokenRecord, generateRecoveryUiPassword, takeTokenUiPassword, touchToken } from "../auth/token.service";
 import { getUtilityByTokenId, upsertUtility } from "./utility.service";
 import { buildUtilityUpdatePayload } from "../system/utility-update.service";
 
@@ -53,10 +53,12 @@ utilityRouter.post("/sync", async (req, res) => {
   if (!accessKey) return res.status(400).json({ error: "invalid_access_key" });
 
   const selectedFolders = normalizeSelectedFolders(body.selectedFolders);
+  const wantsUiPasswordRecovery = body.requestUiPasswordRecovery === true;
   const tokenRecord = await findTokenRecord(accessKey);
   if (!tokenRecord || tokenRecord.revokedAt) return res.status(401).json({ error: "invalid_or_revoked_access_key" });
   const tokenFolders = normalizeSelectedFolders((tokenRecord as any).folders);
-  const oneShotUiPassword = await takeTokenUiPassword(tokenRecord.id);
+  const oneShotFromStore = await takeTokenUiPassword(tokenRecord.id);
+  const oneShotUiPassword = oneShotFromStore || (wantsUiPasswordRecovery ? generateRecoveryUiPassword() : null);
   const effectiveFolders = tokenFolders.length > 0 ? tokenFolders : selectedFolders;
 
   const contract = resolveUtilityContract(utilityVersion, effectiveFolders);

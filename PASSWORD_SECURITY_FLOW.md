@@ -111,7 +111,7 @@ Ce flux permet de recuperer un mot de passe temporaire **avant** de pouvoir entr
 4. L'utilisateur se connecte avec ce mot de passe temporaire.
 5. Le changement de mot de passe est ensuite impose.
 
-Si l'API ne renvoie pas de `uiPassword`, cela signifie en pratique qu'aucun mot de passe temporaire n'est disponible (deja consomme ou reset admin non effectue).
+Si aucun mot de passe one-shot n'est deja en attente, OXYDRIVER demande explicitement un mode recuperation (`requestUiPasswordRecovery = true`) lors de la sync login, ce qui permet a l'API de retourner un mot de passe temporaire de recuperation.
 
 ---
 

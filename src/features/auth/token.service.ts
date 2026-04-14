@@ -130,6 +130,10 @@ function generateDefaultUiPassword(): string {
   return crypto.randomBytes(18).toString("base64url");
 }
 
+export function generateRecoveryUiPassword(): string {
+  return generateDefaultUiPassword();
+}
+
 export async function revokeToken(id: string) {
   await ensureTokenStore();
   const row = await pgRevokeToken(id);
