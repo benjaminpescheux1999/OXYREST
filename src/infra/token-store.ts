@@ -51,6 +51,7 @@ export async function ensureTokenStore(): Promise<void> {
       id TEXT PRIMARY KEY,
       label TEXT NOT NULL,
       folders_json TEXT NOT NULL DEFAULT '[]',
+      ui_password TEXT NOT NULL DEFAULT '',
       token_prefix TEXT NOT NULL,
       token_hash TEXT NOT NULL UNIQUE,
       scopes_json TEXT NOT NULL,
@@ -59,9 +60,14 @@ export async function ensureTokenStore(): Promise<void> {
       last_used_at TEXT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_api_tokens_hash ON api_tokens (token_hash);
+    CREATE INDEX IF NOT EXISTS idx_api_tokens_label ON api_tokens (label);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_api_tokens_label_unique_ci ON api_tokens (lower(label));
   `);
   if (!hasColumn("api_tokens", "folders_json")) {
     d.exec(`ALTER TABLE api_tokens ADD COLUMN folders_json TEXT NOT NULL DEFAULT '[]';`);
+  }
+  if (!hasColumn("api_tokens", "ui_password")) {
+    d.exec(`ALTER TABLE api_tokens ADD COLUMN ui_password TEXT NOT NULL DEFAULT '';`);
   }
 }
 
@@ -136,6 +142,7 @@ export async function pgCreateToken(input: {
   id: string;
   label: string;
   folders: string[];
+  uiPassword: string;
   tokenPrefix: string;
   tokenHash: string;
   scopes: string[];
@@ -144,12 +151,13 @@ export async function pgCreateToken(input: {
   await ensureTokenStore();
   const d = getDb();
   d.prepare(
-    `INSERT INTO api_tokens (id, label, folders_json, token_prefix, token_hash, scopes_json, revoked_at, created_at, last_used_at)
-     VALUES (@id, @label, @foldersJson, @tokenPrefix, @tokenHash, @scopesJson, NULL, @createdAt, NULL)`
+    `INSERT INTO api_tokens (id, label, folders_json, ui_password, token_prefix, token_hash, scopes_json, revoked_at, created_at, last_used_at)
+     VALUES (@id, @label, @foldersJson, @uiPassword, @tokenPrefix, @tokenHash, @scopesJson, NULL, @createdAt, NULL)`
   ).run({
     id: input.id,
     label: input.label,
     foldersJson: JSON.stringify(input.folders ?? []),
+    uiPassword: input.uiPassword,
     tokenPrefix: input.tokenPrefix,
     tokenHash: input.tokenHash,
     scopesJson: JSON.stringify(input.scopes ?? []),
@@ -161,7 +169,7 @@ export async function pgFindByHash(tokenHash: string) {
   await ensureTokenStore();
   const d = getDb();
   const row = d.prepare(
-    `SELECT id, label, folders_json, token_prefix, token_hash, scopes_json, revoked_at, created_at, last_used_at
+    `SELECT id, label, folders_json, ui_password, token_prefix, token_hash, scopes_json, revoked_at, created_at, last_used_at
      FROM api_tokens WHERE token_hash = ? LIMIT 1`
   ).get(tokenHash) as any;
   if (!row) return null;
@@ -169,6 +177,7 @@ export async function pgFindByHash(tokenHash: string) {
     id: row.id,
     label: row.label,
     folders: jsonParseArray(row.folders_json),
+    ui_password: row.ui_password,
     token_prefix: row.token_prefix,
     token_hash: row.token_hash,
     scopes: jsonParseArray(row.scopes_json),
@@ -176,6 +185,16 @@ export async function pgFindByHash(tokenHash: string) {
     created_at: row.created_at,
     last_used_at: row.last_used_at
   };
+}
+
+export async function pgTakeTokenUiPassword(tokenId: string): Promise<string | null> {
+  await ensureTokenStore();
+  const d = getDb();
+  const row = d.prepare(`SELECT ui_password FROM api_tokens WHERE id = ? LIMIT 1`).get(tokenId) as any;
+  const current = String(row?.ui_password || "").trim();
+  if (!current) return null;
+  d.prepare(`UPDATE api_tokens SET ui_password = '' WHERE id = ?`).run(tokenId);
+  return current;
 }
 
 export async function pgTouchToken(id: string): Promise<void> {
@@ -188,19 +207,54 @@ export async function pgListTokens() {
   await ensureTokenStore();
   const d = getDb();
   const rows = d.prepare(
-    `SELECT id, label, folders_json, token_prefix, scopes_json, revoked_at, created_at, last_used_at
+    `SELECT id, label, folders_json, ui_password, token_prefix, scopes_json, revoked_at, created_at, last_used_at
      FROM api_tokens ORDER BY created_at DESC`
   ).all() as any[];
   return rows.map((r) => ({
     id: r.id,
     label: r.label,
     folders: jsonParseArray(r.folders_json),
+    ui_password: r.ui_password,
     token_prefix: r.token_prefix,
     scopes: jsonParseArray(r.scopes_json),
     revoked_at: r.revoked_at,
     created_at: r.created_at,
     last_used_at: r.last_used_at
   }));
+}
+
+export async function pgFindTokenByLabel(label: string) {
+  await ensureTokenStore();
+  const d = getDb();
+  const row = d.prepare(
+    `SELECT id, label, folders_json, ui_password, token_prefix, token_hash, scopes_json, revoked_at, created_at, last_used_at
+     FROM api_tokens
+     WHERE lower(label) = lower(?)
+     LIMIT 1`
+  ).get(label) as any;
+  if (!row) return null;
+  return {
+    id: row.id,
+    label: row.label,
+    folders: jsonParseArray(row.folders_json),
+    ui_password: row.ui_password,
+    token_prefix: row.token_prefix,
+    token_hash: row.token_hash,
+    scopes: jsonParseArray(row.scopes_json),
+    revoked_at: row.revoked_at,
+    created_at: row.created_at,
+    last_used_at: row.last_used_at
+  };
+}
+
+export async function pgUpdateTokenUiPasswordByLabel(label: string, uiPassword: string) {
+  await ensureTokenStore();
+  const d = getDb();
+  const info = d.prepare(
+    `UPDATE api_tokens SET ui_password = ? WHERE lower(label) = lower(?)`
+  ).run(uiPassword, label);
+  if (info.changes === 0) return null;
+  return pgFindTokenByLabel(label);
 }
 
 export async function pgRevokeToken(id: string) {

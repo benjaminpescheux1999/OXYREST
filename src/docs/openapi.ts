@@ -76,9 +76,38 @@ export const openApiDocument = {
           }
         },
         responses: {
-          "201": { description: "Token créé" },
+          "201": { description: "Token créé (retourne aussi le mot de passe interface par défaut)" },
           "400": { description: "Payload invalide" },
+          "409": { description: "Label déjà utilisé (doit être unique)" },
           "401": { description: "Non autorisé" }
+        }
+      }
+    },
+    "/admin/tokens/reset-ui-password": {
+      post: {
+        tags: ["SuperAdmin"],
+        summary: "Réinitialiser le mot de passe interface d'un token via son label",
+        security: [{ SuperAdminApiKey: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["label"],
+                properties: {
+                  label: { type: "string", example: "Client Brest" },
+                  newPassword: { type: "string", example: "oxy-ab12cd34" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Mot de passe réinitialisé" },
+          "400": { description: "Payload invalide" },
+          "401": { description: "Non autorisé" },
+          "404": { description: "Label introuvable" }
         }
       }
     },

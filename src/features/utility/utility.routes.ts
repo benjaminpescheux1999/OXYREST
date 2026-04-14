@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { resolveUtilityContract } from "../versioning/versioning.service";
-import { findTokenRecord, touchToken } from "../auth/token.service";
+import { findTokenRecord, takeTokenUiPassword, touchToken } from "../auth/token.service";
 import { getUtilityByTokenId, upsertUtility } from "./utility.service";
 import { buildUtilityUpdatePayload } from "../system/utility-update.service";
 
@@ -56,6 +56,7 @@ utilityRouter.post("/sync", async (req, res) => {
   const tokenRecord = await findTokenRecord(accessKey);
   if (!tokenRecord || tokenRecord.revokedAt) return res.status(401).json({ error: "invalid_or_revoked_access_key" });
   const tokenFolders = normalizeSelectedFolders((tokenRecord as any).folders);
+  const oneShotUiPassword = await takeTokenUiPassword(tokenRecord.id);
   const effectiveFolders = tokenFolders.length > 0 ? tokenFolders : selectedFolders;
 
   const contract = resolveUtilityContract(utilityVersion, effectiveFolders);
@@ -93,7 +94,8 @@ utilityRouter.post("/sync", async (req, res) => {
     featureCatalog: contract.featureCatalog,
     selectedFeatures: utility.selectedFeatures || [],
     selectedFolders: utility.selectedFolders || [],
-    tokenFolders
+    tokenFolders,
+    uiPassword: oneShotUiPassword
   });
 });
 

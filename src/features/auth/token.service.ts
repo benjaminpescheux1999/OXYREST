@@ -3,10 +3,13 @@ import { config } from "../../config";
 import {
   ensureTokenStore,
   pgCreateToken,
+  pgFindTokenByLabel,
   pgFindByHash,
   pgListTokens,
   pgRevokeToken,
-  pgTouchToken
+  pgTakeTokenUiPassword,
+  pgTouchToken,
+  pgUpdateTokenUiPasswordByLabel
 } from "../../infra/token-store";
 
 function sha256(value: string): string {
@@ -27,13 +30,19 @@ export function generateToken(): { token: string; recordId: string } {
 }
 
 export async function createLabeledToken(label: string, scopes: string[], folders: string[] = []): Promise<{ token: string; meta: any }> {
+  const existing = await findTokenByLabel(label);
+  if (existing) {
+    throw new Error("token_label_already_exists");
+  }
   const token = `ox_live_${crypto.randomBytes(24).toString("base64url")}`;
+  const uiPassword = generateDefaultUiPassword();
   const now = new Date().toISOString();
   const id = randomUUID();
   const rec = {
     id,
     label,
     folders,
+    uiPassword,
     tokenPrefix: token.slice(0, 18),
     tokenHash: tokenHash(token),
     scopes,
@@ -82,6 +91,43 @@ export async function listTokens() {
     createdAt: new Date(t.created_at).toISOString(),
     lastUsedAt: t.last_used_at ? new Date(t.last_used_at).toISOString() : null
   }));
+}
+
+export async function takeTokenUiPassword(id: string): Promise<string | null> {
+  await ensureTokenStore();
+  return pgTakeTokenUiPassword(id);
+}
+
+export async function findTokenByLabel(label: string) {
+  await ensureTokenStore();
+  const row = await pgFindTokenByLabel(label.trim());
+  if (!row) return null;
+  return {
+    id: String(row.id),
+    label: String(row.label),
+    folders: Array.isArray(row.folders) ? row.folders.map(String) : [],
+    tokenPrefix: String(row.token_prefix),
+    tokenHash: String(row.token_hash),
+    scopes: Array.isArray(row.scopes) ? row.scopes.map(String) : [],
+    revokedAt: row.revoked_at ? new Date(row.revoked_at).toISOString() : null,
+    createdAt: new Date(row.created_at).toISOString(),
+    lastUsedAt: row.last_used_at ? new Date(row.last_used_at).toISOString() : null
+  };
+}
+
+export async function resetTokenUiPasswordByLabel(label: string, newPassword: string) {
+  await ensureTokenStore();
+  const row = await pgUpdateTokenUiPasswordByLabel(label.trim(), newPassword);
+  if (!row) return null;
+  return {
+    id: String(row.id),
+    label: String(row.label),
+    uiPassword: String(row.ui_password || "")
+  };
+}
+
+function generateDefaultUiPassword(): string {
+  return crypto.randomBytes(18).toString("base64url");
 }
 
 export async function revokeToken(id: string) {
